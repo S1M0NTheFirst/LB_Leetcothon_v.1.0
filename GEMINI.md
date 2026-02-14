@@ -36,3 +36,11 @@ Currently, we are building the **Landing Page** and **Authentication System**.
 - Use `shadcn/ui` or generic Tailwind components.
 - Do not use raw CSS files; use Tailwind utility classes.
 - For DynamoDB calls, use `aws-sdk/client-dynamodb` and `lib-dynamodb`.
+
+## UI & Animation Features
+- **Animation Library:** `framer-motion` (Use `AnimatePresence` for the number flip effect).
+- **Data Fetching:** `swr` (Use for polling the user count every 5 seconds).
+- **Navbar:** Sticky top, glassmorphism effect (`backdrop-blur`).
+- **Profile Management:**
+    - Use a **Dialog/Modal** for editing the profile.
+    - **Avatar:** For V1, allow users to enter an image URL or randomize a "DiceBear" seed.
