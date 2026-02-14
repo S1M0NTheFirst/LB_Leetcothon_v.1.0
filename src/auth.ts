@@ -4,6 +4,7 @@ import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { db, TABLE_NAME } from "@/lib/dynamodb";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET,
   providers: [
     MicrosoftEntraID({
       clientId: process.env.AZURE_AD_CLIENT_ID,
@@ -13,13 +14,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async signIn({ user }) {
-      if (!user?.email) {
-        console.error("Sign-in failed: No email provided by provider");
-        return false;
-      }
+      if (!user?.email) return false;
 
       try {
-        // Check if user exists in DynamoDB
         const { Item } = await db.send(
           new GetCommand({
             TableName: TABLE_NAME,
@@ -27,7 +24,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           })
         );
 
-        // If user doesn't exist, create a new record
         if (!Item) {
           await db.send(
             new PutCommand({
@@ -42,7 +38,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             })
           );
         } else {
-          // Update last login
           await db.send(
             new PutCommand({
               TableName: TABLE_NAME,
@@ -55,10 +50,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         return true;
       } catch (error) {
-        console.error("Error during sign-in callback in DynamoDB:", error);
-        return false; 
+        return true; 
       }
     },
+    async session({ session, user, token }) {
+      return session;
+    },
   },
-  debug: process.env.NODE_ENV === "development",
+  trustHost: true,
+  debug: true,
 });
