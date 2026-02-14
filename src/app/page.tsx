@@ -1,5 +1,5 @@
 import CountdownTimer from "@/components/CountdownTimer";
-import LiveStats from "@/components/LiveStats";
+import RegistrationCounter from "@/components/RegistrationCounter";
 import SignInButton from "@/components/SignInButton";
 import Logo from "@/components/Logo";
 
@@ -31,7 +31,7 @@ export default function Home() {
         </div>
 
         {/* Stats Section */}
-        <LiveStats />
+        <RegistrationCounter />
         
         <div className="mt-32 text-white/20 text-sm font-medium">
           Powered by S1M0N
