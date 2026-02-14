@@ -1,19 +1,22 @@
 import NextAuth from "next-auth";
-import AzureADProvider from "next-auth/providers/azure-ad";
+import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { db, TABLE_NAME } from "@/lib/dynamodb";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    AzureADProvider({
-      clientId: process.env.AZURE_AD_CLIENT_ID!,
-      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-      tenantId: process.env.AZURE_AD_TENANT_ID,
+    MicrosoftEntraID({
+      clientId: process.env.AZURE_AD_CLIENT_ID,
+      clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
+      issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/v2.0`,
     }),
   ],
   callbacks: {
     async signIn({ user }) {
-      if (!user.email) return false;
+      if (!user?.email) {
+        console.error("Sign-in failed: No email provided by provider");
+        return false;
+      }
 
       try {
         // Check if user exists in DynamoDB
@@ -38,8 +41,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               },
             })
           );
+          console.log(`New user created: ${user.email}`);
         } else {
-          // Optionally update last login
+          // Update last login
           await db.send(
             new PutCommand({
               TableName: TABLE_NAME,
@@ -49,12 +53,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               },
             })
           );
+          console.log(`Existing user logged in: ${user.email}`);
         }
         return true;
       } catch (error) {
-        console.error("Error during sign-in callback:", error);
-        return false;
+        console.error("Error during sign-in callback in DynamoDB:", error);
+        return false; 
       }
     },
   },
+  debug: process.env.NODE_ENV === "development",
 });

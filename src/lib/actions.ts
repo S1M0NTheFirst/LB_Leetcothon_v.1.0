@@ -3,5 +3,5 @@
 import { signIn } from "@/auth";
 
 export async function loginWithAzure() {
-  await signIn("azure-ad");
+  await signIn("microsoft-entra-id");
 }
