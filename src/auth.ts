@@ -41,7 +41,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               },
             })
           );
-          console.log(`New user created: ${user.email}`);
         } else {
           // Update last login
           await db.send(
@@ -53,7 +52,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               },
             })
           );
-          console.log(`Existing user logged in: ${user.email}`);
         }
         return true;
       } catch (error) {
