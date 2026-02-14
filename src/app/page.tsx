@@ -1,13 +1,15 @@
 import CountdownTimer from "@/components/CountdownTimer";
 import LiveStats from "@/components/LiveStats";
 import SignInButton from "@/components/SignInButton";
+import Logo from "@/components/Logo";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white selection:bg-blue-500/30">
       <div className="max-w-5xl mx-auto px-6 pt-24 pb-16 flex flex-col items-center text-center">
         {/* Hero Section */}
-        <div className="space-y-6">
+        <div className="space-y-6 flex flex-col items-center">
+          <Logo className="w-24 h-24 mb-4" />
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40">
             LB Leetcodethon
           </h1>
