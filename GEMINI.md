@@ -44,3 +44,11 @@ Currently, we are building the **Landing Page** and **Authentication System**.
 - **Profile Management:**
     - Use a **Dialog/Modal** for editing the profile.
     - **Avatar:** For V1, allow users to enter an image URL or randomize a "DiceBear" seed.
+
+## Authentication Rules
+- **Global Protection:** The entire application is protected.
+- **Middleware:** Use `middleware.ts` to intercept all requests.
+- **Logic:**
+    - If user is NOT logged in -> Redirect to `/api/auth/signin` (Microsoft).
+    - If user IS logged in -> Allow access to `/`.
+    - **Exceptions:** Allow access to `/_next` (static files), `/api/auth` (login routes), and `/favicon.ico`.

@@ -19,11 +19,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Action Section */}
-        <div className="mt-12">
-          <SignInButton />
-        </div>
-
         {/* Countdown Section */}
         <div className="mt-20 w-full max-w-3xl">
           <h2 className="text-sm font-bold uppercase tracking-widest text-blue-500 mb-4">Leetcodethon Starts In</h2>
