@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+🐝 LB Leetcothon v1.0
+Code. Compete. Conquer.
+Leetcothon is a high-intensity, 7-day algorithmic sprint designed exclusively for CSULB students during Spring Break. This is more than a competition—it is a community-driven arena designed to sharpen problem-solving skills and prepare participants for top-tier technical internship interviews.
 
-## Getting Started
+📅 Event Schedule
+Start: Monday, March 30 @ 00:00 AM
 
-First, run the development server:
+End: Sunday, April 5 @ 08:00 PM
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Format: 100% Online | Self-Monitored | Non-Profit
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+🛠️ The Mission: void prepareForSuccess()
+This event is a zero-cost initiative focused on hands-on implementation. We aim to bridge the gap between classroom theory and interview reality by mastering Data Structures and Algorithms (DSA) in a high-pressure, collaborative environment.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+📜 The Playbook (Protocols)
+🛰️ PROTOCOL_01: The 7-Day Sprint
+The arena updates every 24 hours with new algorithmic challenges.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Topics: Daily rotation including Arrays, Dynamic Programming, Graphs, and Trees.
 
-## Learn More
+Payload: 4 Core Problems (Easy to Medium) + 1 Bonus Anomaly (Hard) per day.
 
-To learn more about Next.js, take a look at the following resources:
+Window: Problems go live at 00:00 AM and the sector locks at 11:59 PM.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+📈 PROTOCOL_02: Scoring & Optimization
+Your rank is determined by both accuracy and efficiency.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Base Rewards: Easy (1pt), Medium (2-4pts), Hard Bonus (5pts).
 
-## Deploy on Vercel
+Optimization Bonus: High-efficiency solutions (optimal runtime) receive a 2x Multiplier.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Iteration: You can resubmit to optimize your code and claim the maximum point cap.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+⚖️ PROTOCOL_03: The Economy & Intel
+Prediction Pool: Wager your earned points in the daily pool. Solvers split the pot; those who fail to solve forfeit their wager.
+
+Consistency Pool: A high-stakes pool for daily streaks. If you miss a single day, your contribution is distributed among the survivors.
+
+Live Intel: Monitor the leaderboard in real-time for metrics on point totals, solve speed, and total active "grind time."
+
+🎮 Features
+🚀 The Arena: An integrated coding environment built directly into the platform.
+
+💰 Prediction Pool: A unique "gambling" mechanic to trade points for higher rankings.
+
+📊 Live Intel: Real-time telemetry tracking the top 3 operatives and global rankings.
+
+🔰 Beginner Friendly: Specifically tagged tracks for those new to DSA.
+
+🛡️ Guidelines
+Integrity: While collaboration is encouraged, "brute forcing" or plagiarizing solutions is against the spirit of the sprint.
+
+Consistency: The daily window is strict. Once a day ends, that point opportunity is gone forever.
+
+Community: Use the shared energy to stay motivated during the week-long grind.
+
+System Status: Awaiting satellite connection... Operational on March 30.
