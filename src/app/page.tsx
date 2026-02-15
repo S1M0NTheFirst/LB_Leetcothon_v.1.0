@@ -13,6 +13,13 @@ export default function Home() {
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40">
             LB Leetcothon
           </h1>
+          
+          {/* Terminal Schedule Line */}
+          <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/10 rounded-lg font-mono text-sm md:text-base mb-2">
+            <span className="text-white/30">$</span>
+            <span className="text-green-400">Monday, March 30 00:00 am - Sunday, April 5 8:00 pm</span>
+          </div>
+
           <p className="text-xl md:text-2xl text-white/60 max-w-2xl mx-auto font-medium">
             Join the ultimate CSULB leetcoding challenge for SpringBreak. 
             Level up your skills and compete for the 🔥FAANG+.
@@ -25,8 +32,15 @@ export default function Home() {
           <CountdownTimer targetDate="2026-03-30T00:00:00" />
         </div>
 
-        {/* Stats Section */}
-        <RegistrationCounter />
+        {/* Stats Section with Badge */}
+        <div className="relative w-full">
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
+            <span className="px-3 py-1 bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold uppercase tracking-wider rounded-full backdrop-blur-sm">
+              ✨ Beginner Friendly
+            </span>
+          </div>
+          <RegistrationCounter />
+        </div>
         
         {/* About Section */}
         <section className="mt-32 w-full max-w-4xl bg-white/5 border border-white/10 rounded-3xl p-8 md:p-16">
