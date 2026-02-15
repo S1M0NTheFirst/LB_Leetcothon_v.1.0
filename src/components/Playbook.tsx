@@ -7,18 +7,18 @@ import { ChevronDown } from "lucide-react";
 const protocols = [
   {
     id: "PROTOCOL_01",
-    title: "Event Structure",
-    body: "The Leetcothon operates on a strict 24-hour cycle. New algorithm topics are injected daily at 00:00 AM PST and vanish at 11:59 PM PST. You must submit your solutions within this window. Once the day ends, the sector closes.",
+    title: "The 7-Day Sprint",
+    body: "The event runs strictly through Spring Break. Each day brings a new topic (Arrays, DP, Graphs, Trees) containing 4 Core Problems (Easy-Medium) and 1 Bonus Anomaly (Hard). Completion is voluntary, but attempt is mandatory for growth. All code execution occurs in 'The Arena'.",
   },
   {
     id: "PROTOCOL_02",
-    title: "The Scoring Algorithm",
-    body: "Every solved problem adds to your score, but consistency is your currency. We utilize a 'Streak Multiplier'—maintain a daily streak to compound your points. WARNING: If you miss a single day, your streak resets and you suffer a massive point penalty. High risk, high reward.",
+    title: "Scoring & Optimization",
+    body: "Base points scale with difficulty: P1(1pt) to P4(4pt), with the Bonus yielding 5pts. OPTIMIZATION BONUS: Efficient runtime solutions grant a 2x Multiplier—brute force is discouraged. You may resubmit to optimize your code, capping your max reward at double the base points.",
   },
   {
     id: "PROTOCOL_03",
-    title: "Live Telemetry",
-    body: "You are being watched. The Global Leaderboard updates in real-time, tracking not just points, but performance metrics: Fastest Execution Time, Longest Active Session, and Code Efficiency. Only the top 3 operatives will be recognized.",
+    title: "The Economy & Intel",
+    body: "Wager your points in the 'Prediction Pool'. Join Problem Pools (solvers split the pot) or the Daily Consistency Pool (survivors share the wealth of those who missed a day). Meanwhile, 'Live Intel' tracks real-time telemetry: Top Scores, Solved Counts, and Longest Active Sessions.",
   },
 ];
 
