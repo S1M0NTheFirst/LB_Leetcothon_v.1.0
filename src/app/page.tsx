@@ -3,6 +3,7 @@ import RegistrationCounter from "@/components/RegistrationCounter";
 import SignInButton from "@/components/SignInButton";
 import Logo from "@/components/Logo";
 import * as motion from "framer-motion/client";
+import Playbook from "@/components/Playbook";
 
 export default function Home() {
   return (
@@ -135,6 +136,12 @@ export default function Home() {
             </motion.div>
           </div>
         </motion.section>
+
+        {/* Divider */}
+        <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-32" />
+
+        {/* Playbook Section */}
+        <Playbook />
 
         <div className="mt-32 text-white/20 text-sm font-medium">
           Powered by S1M0N
