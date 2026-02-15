@@ -1,57 +1,74 @@
-🐝 LB Leetcothon v1.0
-Code. Compete. Conquer.
-Leetcothon is a high-intensity, 7-day algorithmic sprint designed exclusively for CSULB students during Spring Break. This is more than a competition—it is a community-driven arena designed to sharpen problem-solving skills and prepare participants for top-tier technical internship interviews.
+# 🐝 LB Leetcothon v1.0
 
-📅 Event Schedule
-Start: Monday, March 30 @ 00:00 AM
+![Status](https://img.shields.io/badge/STATUS-ONLINE-success?style=for-the-badge)
+![Event Type](https://img.shields.io/badge/EVENT-SPRING_BREAK_SPRINT-yellow?style=for-the-badge)
+![Cost](https://img.shields.io/badge/COST-FREE-blue?style=for-the-badge)
 
-End: Sunday, April 5 @ 08:00 PM
+> **Code. Compete. Conquer.**
 
-Format: 100% Online | Self-Monitored | Non-Profit
+**Leetcothon** is a high-intensity, 7-day algorithmic sprint designed exclusively for CSULB students. This is more than just a competition—it is a community-driven arena designed to sharpen problem-solving skills and prepare operatives for top-tier technical internship interviews.
 
-🛠️ The Mission: void prepareForSuccess()
-This event is a zero-cost initiative focused on hands-on implementation. We aim to bridge the gap between classroom theory and interview reality by mastering Data Structures and Algorithms (DSA) in a high-pressure, collaborative environment.
+---
 
-📜 The Playbook (Protocols)
-🛰️ PROTOCOL_01: The 7-Day Sprint
-The arena updates every 24 hours with new algorithmic challenges.
+## 📅 Transmission Schedule
 
-Topics: Daily rotation including Arrays, Dynamic Programming, Graphs, and Trees.
+| Event Phase | Date & Time | Status |
+| :--- | :--- | :--- |
+| **System Online** | Monday, March 30 @ 00:00 AM | 🟢 Active |
+| **System Offline** | Sunday, April 5 @ 08:00 PM | 🔴 Locked |
 
-Payload: 4 Core Problems (Easy to Medium) + 1 Bonus Anomaly (Hard) per day.
+* **Format:** 100% Online | Self-Monitored | Non-Profit
 
-Window: Problems go live at 00:00 AM and the sector locks at 11:59 PM.
+---
 
-📈 PROTOCOL_02: Scoring & Optimization
-Your rank is determined by both accuracy and efficiency.
+## 📜 The Protocols
 
-Base Rewards: Easy (1pt), Medium (2-4pts), Hard Bonus (5pts).
+### 🛰️ PROTOCOL_01: The 7-Day Sprint
+The arena updates every 24 hours with new algorithmic challenges. The mission is consistency.
 
-Optimization Bonus: High-efficiency solutions (optimal runtime) receive a 2x Multiplier.
+* **Daily Payload:** 4 Core Problems (Easy to Medium) + 1 Bonus Anomaly (Hard).
+* **Topics:** Rotation includes Arrays, Dynamic Programming, Graphs, and Trees.
+* **Time Window:** Problems go live at `00:00 AM` and the sector locks at `11:59 PM`.
+* **Platform:** All code execution occurs in **The Arena**.
 
-Iteration: You can resubmit to optimize your code and claim the maximum point cap.
+### 📈 PROTOCOL_02: Scoring & Optimization
+Your rank is determined by both accuracy and computational efficiency.
 
-⚖️ PROTOCOL_03: The Economy & Intel
-Prediction Pool: Wager your earned points in the daily pool. Solvers split the pot; those who fail to solve forfeit their wager.
+* **Base Rewards:**
+    * Easy: `1 pt`
+    * Medium: `2-4 pts`
+    * Hard (Bonus): `5 pts`
+* **Optimization Bonus:** High-efficiency solutions (optimal runtime) receive a **2x Multiplier**. Brute force is discouraged.
+* **Iteration:** You may resubmit solutions to optimize your runtime and claim the maximum point cap.
 
-Consistency Pool: A high-stakes pool for daily streaks. If you miss a single day, your contribution is distributed among the survivors.
+### ⚖️ PROTOCOL_03: The Economy (Gambling)
+Points are not just for ranking; they are currency.
 
-Live Intel: Monitor the leaderboard in real-time for metrics on point totals, solve speed, and total active "grind time."
+* **Prediction Pool:** Wager your earned points on specific problems. Solvers split the pot; those who fail to solve forfeit their wager.
+* **Consistency Pool:** A high-stakes daily pool. If you miss a single day, your contribution is distributed among the survivors who maintained their streak.
+* **Live Intel:** Real-time telemetry tracks the **Top 3 Operatives**, **Fastest Solvers**, and **Longest Active Sessions**.
 
-🎮 Features
-🚀 The Arena: An integrated coding environment built directly into the platform.
+---
 
-💰 Prediction Pool: A unique "gambling" mechanic to trade points for higher rankings.
+## 🎮 System Features
 
-📊 Live Intel: Real-time telemetry tracking the top 3 operatives and global rankings.
+* **The Arena:** Integrated coding environment.
+* **Prediction Pool:** High-stakes point wagering system.
+* **Live Intel:** Real-time global leaderboard and stats.
+* **Beginner Friendly:** Tagged tracks for new initiates.
 
-🔰 Beginner Friendly: Specifically tagged tracks for those new to DSA.
+---
 
-🛡️ Guidelines
-Integrity: While collaboration is encouraged, "brute forcing" or plagiarizing solutions is against the spirit of the sprint.
+### 🛡️ Directives
 
-Consistency: The daily window is strict. Once a day ends, that point opportunity is gone forever.
+1.  **Integrity:** Collaboration is encouraged; plagiarism is prohibited.
+2.  **Consistency:** The daily window is absolute. Missed packets cannot be recovered.
+3.  **Community:** Prepare for your interviews together.
 
-Community: Use the shared energy to stay motivated during the week-long grind.
+---
 
-System Status: Awaiting satellite connection... Operational on March 30.
+<div align="center">
+  <sub>Built for the CSULB Community</sub>
+  <br />
+  <sub>version 1.0.0</sub>
+</div>
