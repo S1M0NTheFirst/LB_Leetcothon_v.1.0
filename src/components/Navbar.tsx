@@ -24,7 +24,7 @@ export default function Navbar() {
         {/* Left: Logo */}
         <Link href="/" className="flex items-center gap-2 cursor-pointer shrink-0">
           <Logo className="w-8 h-8" />
-          <span className="font-bold tracking-tight hidden lg:block">LB_Leetcodethonv1.0</span>
+          <span className="font-bold tracking-tight hidden lg:block">LB Leetcothon 1.0</span>
         </Link>
 
         {/* Center: Navigation Menu */}
