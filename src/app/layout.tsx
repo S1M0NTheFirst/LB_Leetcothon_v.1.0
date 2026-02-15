@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LB_Leetcodethonv1.0",
-  description: "The official CSULB coding competition.",
+  title: "LB Leetcothon | CSULB Coding Challenge",
+  description: "The Ultimate CSULB Spring Break Coding Challenge. Level up your skills and compete for FAANG+.",
 };
 
 export default function RootLayout({
