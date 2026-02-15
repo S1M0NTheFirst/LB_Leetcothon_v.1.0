@@ -2,10 +2,11 @@ import CountdownTimer from "@/components/CountdownTimer";
 import RegistrationCounter from "@/components/RegistrationCounter";
 import SignInButton from "@/components/SignInButton";
 import Logo from "@/components/Logo";
+import * as motion from "framer-motion/client";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-white selection:bg-blue-500/30">
+    <main className="min-h-screen bg-[#0a0a0a] text-white selection:bg-blue-500/30 overflow-x-hidden">
       <div className="max-w-5xl mx-auto px-6 pt-24 pb-16 flex flex-col items-center text-center">
         {/* Hero Section */}
         <div className="space-y-6 flex flex-col items-center">
@@ -43,46 +44,83 @@ export default function Home() {
         </div>
         
         {/* About Section */}
-        <section className="mt-32 w-full max-w-4xl bg-white/5 border border-white/10 rounded-3xl p-8 md:p-16">
-          <h2 className="text-3xl md:text-5xl font-black mb-8 tracking-tight">About Leetcothon</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-left">
-            <div className="space-y-4">
-              <h3 className="text-xl font-bold text-yellow-500">The Ultimate CSULB Spring Break Coding Challenge</h3>
-              <p className="text-white/60 leading-relaxed">
-                Leetcothon is more than just a competition. It&apos;s a week-long intensive coding sprint designed to sharpen your problem-solving skills and prepare you for the toughest technical interviews.
-              </p>
+        <motion.section 
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="mt-32 w-full max-w-4xl relative"
+        >
+          {/* Decorative Grid Background */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] -z-10" />
+
+          {/* Terminal Window Decoration */}
+          <div className="bg-[#111] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+            <div className="bg-white/5 border-b border-white/10 px-6 py-3 flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/40" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/40" />
+                <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/40" />
+              </div>
+              <span className="text-xs font-mono text-white/20 ml-2">about_leetcothon.md</span>
             </div>
-            <div className="space-y-6">
-              <div className="flex gap-4">
-                <div className="w-12 h-12 shrink-0 rounded-xl bg-yellow-500/10 flex items-center justify-center">
-                  <span className="text-2xl">🎯</span>
+
+            <div className="p-8 md:p-16 text-center">
+              <h2 className="text-3xl md:text-5xl font-black mb-12 tracking-tight text-yellow-500">
+                Why Join Leetcothon?
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-left">
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold font-mono text-white">
+                    <span className="text-blue-400">void</span> prepareForSuccess()
+                  </h3>
+                  <p className="text-gray-300 leading-relaxed">
+                    Leetcothon is more than just a competition. It&apos;s a week-long intensive coding sprint designed to sharpen your problem-solving skills and prepare you for the toughest technical interviews.
+                  </p>
                 </div>
-                <div>
-                  <h4 className="font-bold mb-1">Interview Prep</h4>
-                  <p className="text-sm text-white/40">Curated problems from top tech companies to mirror real interview scenarios.</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-12 h-12 shrink-0 rounded-xl bg-yellow-500/10 flex items-center justify-center">
-                  <span className="text-2xl">📅</span>
-                </div>
-                <div>
-                  <h4 className="font-bold mb-1">Daily Challenges</h4>
-                  <p className="text-sm text-white/40">New problems released every 24 hours to keep the momentum going throughout the break.</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-12 h-12 shrink-0 rounded-xl bg-yellow-500/10 flex items-center justify-center">
-                  <span className="text-2xl">📊</span>
-                </div>
-                <div>
-                  <h4 className="font-bold mb-1">Real-time Leaderboards</h4>
-                  <p className="text-sm text-white/40">Track your progress and see where you stand among your peers in real-time.</p>
+                
+                <div className="space-y-8">
+                  <div className="flex gap-4 group">
+                    <div className="w-12 h-12 shrink-0 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">
+                      <span className="text-2xl">🎯</span>
+                    </div>
+                    <div>
+                      <h4 className="font-mono font-bold mb-1 text-white">
+                        <span className="text-purple-400">class</span> InterviewPrep
+                      </h4>
+                      <p className="text-sm text-gray-400">Curated problems from top tech companies to mirror real interview scenarios.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 group">
+                    <div className="w-12 h-12 shrink-0 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">
+                      <span className="text-2xl">📅</span>
+                    </div>
+                    <div>
+                      <h4 className="font-mono font-bold mb-1 text-white">
+                        <span className="text-purple-400">async</span> dailyChallenges()
+                      </h4>
+                      <p className="text-sm text-gray-400">New problems released every 24 hours to keep the momentum going throughout the break.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 group">
+                    <div className="w-12 h-12 shrink-0 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">
+                      <span className="text-2xl">📊</span>
+                    </div>
+                    <div>
+                      <h4 className="font-mono font-bold mb-1 text-white">
+                        <span className="text-purple-400">get</span> Leaderboard()
+                      </h4>
+                      <p className="text-sm text-gray-400">Track your progress and see where you stand among your peers in real-time.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         <div className="mt-32 text-white/20 text-sm font-medium">
           Powered by S1M0N
