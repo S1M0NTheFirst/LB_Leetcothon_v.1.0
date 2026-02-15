@@ -91,7 +91,7 @@ export default function Home() {
                     <span className="text-blue-400">void</span> prepareForSuccess()
                   </h3>
                   <p className="text-gray-300 leading-relaxed">
-                    Leetcothon is more than just a competition—it’s a collaborative coding sprint designed to get you hired. Whether you are aiming for your first internship or just starting with Data Structures, you won't be doing it alone. Join a community of motivated students solving problems together, keeping each other accountable, and mastering the skills needed for technical interviews
+                    This is a fully online, self-monitored initiative for Spring Break. As a zero-cost, non-profit event, our directive is simple: motivate CS students to master Data Structures and Algorithms through hands-on practice, ensuring you are battle-ready for internship interviews.
                   </p>
                 </div>
                 
