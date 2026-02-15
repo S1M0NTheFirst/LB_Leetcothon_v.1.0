@@ -11,7 +11,7 @@ export default function Home() {
         <div className="space-y-6 flex flex-col items-center">
           <Logo className="w-24 h-24 mb-4" />
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40">
-            LB Leetcodethon
+            LB Leetcothon
           </h1>
           <p className="text-xl md:text-2xl text-white/60 max-w-2xl mx-auto font-medium">
             Join the ultimate CSULB leetcoding challenge for SpringBreak. 
@@ -21,7 +21,7 @@ export default function Home() {
 
         {/* Countdown Section */}
         <div className="mt-20 w-full max-w-3xl">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-blue-500 mb-4">Leetcodethon Starts In</h2>
+          <h2 className="text-sm font-bold uppercase tracking-widest text-blue-500 mb-4">Leetcothon Starts In</h2>
           <CountdownTimer targetDate="2026-03-30T00:00:00" />
         </div>
 
