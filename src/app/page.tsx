@@ -45,10 +45,19 @@ export default function Home() {
         
         {/* About Section */}
         <motion.section 
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial={{ opacity: 0, scale: 0.9, y: 40, filter: "blur(10px)" }}
+          whileInView={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ 
+            duration: 0.8, 
+            ease: [0, 0.71, 0.2, 1.01],
+            scale: {
+              type: "spring",
+              damping: 12,
+              stiffness: 100,
+              restDelta: 0.001
+            }
+          }}
           className="mt-32 w-full max-w-4xl relative"
         >
           {/* Decorative Grid Background */}
@@ -65,7 +74,12 @@ export default function Home() {
               <span className="text-xs font-mono text-white/20 ml-2">about_leetcothon.md</span>
             </div>
 
-            <div className="p-8 md:p-16 text-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="p-8 md:p-16 text-center"
+            >
               <h2 className="text-3xl md:text-5xl font-black mb-12 tracking-tight text-yellow-500">
                 Why Join Leetcothon?
               </h2>
@@ -118,7 +132,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </motion.section>
 
