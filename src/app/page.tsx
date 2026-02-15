@@ -90,7 +90,7 @@ export default function Home() {
                     <span className="text-blue-400">void</span> prepareForSuccess()
                   </h3>
                   <p className="text-gray-300 leading-relaxed">
-                    Leetcothon is more than just a competition. It&apos;s a week-long intensive coding sprint designed to sharpen your problem-solving skills and prepare you for the toughest technical interviews.
+                    Leetcothon is more than just a competition—it’s a collaborative coding sprint designed to get you hired. Whether you are aiming for your first internship or just starting with Data Structures, you won't be doing it alone. Join a community of motivated students solving problems together, keeping each other accountable, and mastering the skills needed for technical interviews
                   </p>
                 </div>
                 

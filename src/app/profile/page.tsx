@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { User as UserIcon, ArrowLeft, LogOut } from "lucide-react";
 import { signOut } from "@/auth";
+import ProfileEditor from "@/components/ProfileEditor";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -27,31 +28,9 @@ export default async function ProfilePage() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 blur-[100px] -z-10" />
           
           <div className="flex flex-col items-center text-center">
-            <div className="relative mb-6">
-              <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-20 animate-pulse" />
-              <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-yellow-500 p-1 bg-[#0a0a0a]">
-                {session.user.image ? (
-                  <img
-                    src={session.user.image}
-                    alt={session.user.name || "User"}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-yellow-500/10 flex items-center justify-center rounded-full">
-                    <UserIcon className="w-16 h-16 text-yellow-500" />
-                  </div>
-                )}
-              </div>
-            </div>
+            <ProfileEditor user={session.user} />
 
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">
-              {session.user.name}
-            </h1>
-            <p className="text-lg text-white/60 font-medium mb-8">
-              {session.user.email}
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-8">
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left">
                 <p className="text-xs font-bold uppercase tracking-widest text-yellow-500 mb-1">Status</p>
                 <p className="font-semibold text-lg">Active Participant</p>

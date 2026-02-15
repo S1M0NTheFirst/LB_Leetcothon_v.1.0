@@ -38,6 +38,7 @@ export async function updateProfile(userId: string, data: { name?: string; image
     );
 
     revalidatePath("/");
+    revalidatePath("/profile");
     return { success: true };
   } catch (error) {
     console.error("Error updating profile:", error);

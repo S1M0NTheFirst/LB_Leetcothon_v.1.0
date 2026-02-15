@@ -53,7 +53,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true; 
       }
     },
-    async session({ session, user, token }) {
+    async session({ session, token }) {
+      if (session.user?.email) {
+        try {
+          const { Item } = await db.send(
+            new GetCommand({
+              TableName: TABLE_NAME,
+              Key: { email: session.user.email },
+            })
+          );
+
+          if (Item) {
+            session.user.name = Item.name;
+            session.user.image = Item.image;
+          }
+        } catch (error) {
+          console.error("Error fetching user session data:", error);
+        }
+      }
       return session;
     },
   },
