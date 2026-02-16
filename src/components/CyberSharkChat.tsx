@@ -83,17 +83,17 @@ export default function CyberSharkChat() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-4 right-4 z-50 flex flex-col items-center cursor-pointer"
+            className="fixed bottom-6 right-6 z-50 flex flex-col items-center cursor-pointer"
             onClick={() => setIsOpen(true)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5 }}
-              className="bg-white text-black px-4 py-2 rounded-full mb-2 shadow-lg relative text-sm font-bold"
+              className="bg-amber-500 text-black px-4 py-2 rounded-full mb-3 shadow-[0_0_15px_rgba(245,158,11,0.4)] relative text-sm font-black tracking-tighter uppercase"
             >
-              Ask me questions...
-              <div className="absolute -bottom-2 right-1/2 translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-white"></div>
+              Ask Me Questions
+              <div className="absolute -bottom-2 right-1/2 translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-amber-500"></div>
             </motion.div>
             <motion.div
               whileHover={{ scale: 1.1 }}
@@ -111,7 +111,7 @@ export default function CyberSharkChat() {
               <img
                 src="/image/shark.png"
                 alt="Cyber Shark"
-                className="h-20 w-20 object-contain drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]"
+                className="h-20 w-20 object-contain drop-shadow-[0_0_15px_rgba(245,158,11,0.6)]"
               />
             </motion.div>
           </motion.div>
@@ -124,81 +124,105 @@ export default function CyberSharkChat() {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed bottom-4 right-4 z-50 w-[350px] h-[500px] bg-black border-2 border-green-500 rounded-lg flex flex-col shadow-[0_0_20px_rgba(34,197,94,0.3)] overflow-hidden font-mono"
+            className="fixed bottom-6 right-6 z-50 w-[380px] h-[550px] bg-black border border-amber-500/50 rounded-2xl flex flex-col shadow-[0_0_20px_rgba(245,158,11,0.2)] overflow-hidden font-mono"
           >
             {/* Header */}
-            <div className="bg-green-500/10 border-b border-green-500 p-3 flex justify-between items-center">
-              <span className="text-green-500 text-xs font-bold tracking-wider">
-                🦈 CYBER_SHARK v1.0 // ONLINE
-              </span>
+            <div className="bg-amber-900/10 border-b border-amber-500/30 p-4 flex justify-between items-center backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+                <span className="text-amber-500 text-xs font-black tracking-[0.2em] uppercase">
+                  CYBER_SHARK v1.0 // ONLINE
+                </span>
+              </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-green-500 hover:text-white transition-colors"
+                className="text-amber-500 hover:text-white hover:bg-amber-500/20 p-1 rounded-lg transition-all"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
 
             {/* Message List */}
             <div
               ref={scrollRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4"
-              style={{ scrollbarWidth: 'thin', scrollbarColor: '#22c55e transparent' }}
+              className="flex-1 overflow-y-auto p-6 space-y-6 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.03)_0%,transparent_100%)]"
+              style={{ scrollbarWidth: 'thin', scrollbarColor: '#f59e0b transparent' }}
             >
               {messages.length === 0 && (
-                <div className="text-green-500/50 text-xs">
-                  SYSTEM_INITIALIZED: Ready for input...
+                <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
+                  <img src="/image/shark3.png" className="w-16 h-16 opacity-20 grayscale" alt="Shark Placeholder" />
+                  <div className="text-amber-500/30 text-[10px] tracking-[0.3em] uppercase">
+                    LONG BEACH LEETCOTHON1.0
+                  </div>
                 </div>
               )}
+              
               {messages.map((m, idx) => (
                 <div
                   key={idx}
-                  className={`flex flex-col ${
-                    m.role === "user" ? "items-end" : "items-start"
+                  className={`flex items-end gap-3 ${
+                    m.role === "user" ? "flex-row-reverse" : "flex-row"
                   }`}
                 >
+                  {m.role === "assistant" && (
+                    <img 
+                      src="/image/shark3.png" 
+                      className="w-10 h-10 rounded-full border border-amber-500/50 bg-black p-1 shadow-[0_0_10px_rgba(245,158,11,0.3)] shrink-0" 
+                      alt="Cyber Shark Avatar"
+                    />
+                  )}
+                  
                   <div
-                    className={`max-w-[90%] p-2 rounded whitespace-pre-wrap ${
+                    className={`max-w-[80%] p-4 text-sm leading-relaxed ${
                       m.role === "user"
-                        ? "text-yellow-400 text-right"
-                        : "text-green-400 text-left"
+                        ? "text-amber-100 bg-amber-500/10 border border-amber-500/50 rounded-tl-2xl rounded-bl-2xl rounded-br-2xl shadow-[0_0_15px_rgba(245,158,11,0.05)]"
+                        : "text-amber-400 bg-zinc-900 border border-amber-500/30 rounded-tr-2xl rounded-br-2xl rounded-bl-2xl backdrop-blur-sm"
                     }`}
                   >
-                    {m.role !== "user" && (
-                      <span className="text-green-600 font-bold">CYBER_SHARK_&gt; </span>
-                    )}
                     {m.content}
                   </div>
                 </div>
               ))}
+              
               {isLoading && (
-                <div className="text-green-500/50 text-xs animate-pulse">
-                  CYBER_SHARK is processing...
+                <div className="flex items-center gap-3">
+                  <img 
+                    src="/image/shark3.png" 
+                    className="w-10 h-10 rounded-full border border-amber-500/50 bg-black p-1 animate-pulse shrink-0" 
+                    alt="Loading"
+                  />
+                  <div className="bg-amber-900/10 p-3 rounded-full flex gap-1">
+                    <div className="w-1 h-1 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <div className="w-1 h-1 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <div className="w-1 h-1 bg-amber-500 rounded-full animate-bounce" />
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Input Area */}
-            <form
-              onSubmit={handleFormSubmit}
-              className="p-3 border-t border-green-500/30 bg-green-500/5 flex gap-2"
-            >
-              <input
-                className="flex-1 bg-transparent border-none outline-none text-green-500 placeholder:text-green-900 text-sm"
-                value={inputValue}
-                placeholder={isLoading ? "SYSTEM_BUSY..." : "TYPE_MESSAGE..."}
-                onChange={(e) => setInputValue(e.target.value)}
-                disabled={isLoading}
-                autoFocus
-              />
-              <button
-                type="submit"
-                className="text-green-500 hover:text-white transition-colors disabled:opacity-50"
-                disabled={isLoading || !inputValue.trim()}
+            <div className="p-4 bg-black border-t border-amber-500/30">
+              <form
+                onSubmit={handleFormSubmit}
+                className="relative flex items-center"
               >
-                <Send size={18} />
-              </button>
-            </form>
+                <input
+                  className="w-full bg-amber-500/5 border border-amber-500/30 rounded-xl py-3 pl-4 pr-12 text-amber-400 placeholder:text-amber-700 text-sm outline-none focus:border-amber-500/60 focus:bg-amber-500/10 transition-all"
+                  value={inputValue}
+                  placeholder={isLoading ? "PROCESSING..." : "ENTER HERE..."}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  disabled={isLoading}
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  className="absolute right-2 text-amber-400 hover:text-white p-2 rounded-lg transition-colors disabled:opacity-20"
+                  disabled={isLoading || !inputValue.trim()}
+                >
+                  <Send size={20} className="drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                </button>
+              </form>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
