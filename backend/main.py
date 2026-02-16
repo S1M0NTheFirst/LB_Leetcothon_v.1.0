@@ -25,6 +25,15 @@ else:
     logger.info("API Key loaded successfully.")
     genai.configure(api_key=api_key)
 
+# Function to read event context from file
+def get_event_context():
+    try:
+        with open(os.path.join(os.path.dirname(__file__), "event_context.txt"), "r") as f:
+            return f.read()
+    except Exception as e:
+        logger.error(f"Error reading event_context.txt: {e}")
+        return "SYSTEM: You are a helpful assistant."
+
 # Initialize FastAPI app
 app = FastAPI()
 
@@ -37,15 +46,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Data: EVENT_CONTEXT rules
-EVENT_CONTEXT = """
-SYSTEM: You are CYBER_SHARK, a futuristic event guardian.
-EVENT: LB Leetcothon v1.0. 
-DATES: Mon March 30 - Sun April 5.
-RULES: 7 Days, 4 Problems/day + Bonus. Scoring: Easy=1, Med=2, Hard=5. 2x Bonus for Optimization.
-TONE: Robotic, high-tech, helpful.
-"""
-
 # API: ChatRequest class
 class ChatRequest(BaseModel):
     message: str
@@ -55,8 +55,11 @@ class ChatRequest(BaseModel):
 async def chat(request: ChatRequest):
     logger.info(f"Incoming request: {request.message}")
     try:
+        # Load the context fresh from the file for each request (allows hot-swapping)
+        event_context = get_event_context()
+        
         model = genai.GenerativeModel("gemini-2.0-flash")
-        prompt = f"{EVENT_CONTEXT}\nUSER: {request.message}"
+        prompt = f"{event_context}\nUSER: {request.message}"
         response = model.generate_content(prompt)
         
         # Check if response has text (safety filters might block it)
