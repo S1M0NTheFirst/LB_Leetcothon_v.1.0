@@ -1,4 +1,4 @@
-# 🐝 LB Leetcothon v1.0
+# 🦈LB Leetcothon v1.0
 
 ![Status](https://img.shields.io/badge/STATUS-ONLINE-success?style=for-the-badge)
 ![Event Type](https://img.shields.io/badge/EVENT-SPRING_BREAK_SPRINT-yellow?style=for-the-badge)
