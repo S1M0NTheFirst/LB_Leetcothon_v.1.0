@@ -142,10 +142,6 @@ export default function Home() {
 
         {/* Playbook Section */}
         <Playbook />
-
-        <div className="mt-32 text-white/20 text-sm font-medium">
-          Powered by S1M0N
-        </div>
       </div>
     </main>
   );

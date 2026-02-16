@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import CyberSharkChat from "@/components/CyberSharkChat";
 
 const geistSans = Geist({
@@ -35,6 +36,7 @@ export default function RootLayout({
           <div className="pt-16">
             {children}
           </div>
+          <Footer />
           <CyberSharkChat />
         </Providers>
       </body>
