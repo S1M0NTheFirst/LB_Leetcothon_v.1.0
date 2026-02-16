@@ -1,14 +1,19 @@
 "use client";
 
-import { useChat } from "ai/react";
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Send } from "lucide-react";
-import Image from "next/image";
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
 
 export default function CyberSharkChat() {
   const [isOpen, setIsOpen] = useState(false);
-  const { messages, input, handleInputChange, handleSubmit } = useChat();
+  const [inputValue, setInputValue] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -16,6 +21,59 @@ export default function CyberSharkChat() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isLoading) return;
+
+    const userMessage = inputValue;
+    setInputValue("");
+    
+    // Append user message
+    const newMessages: Message[] = [
+      ...messages,
+      { role: "user", content: userMessage },
+    ];
+    setMessages(newMessages);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:8005/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: userMessage }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch from backend");
+      }
+
+      const data = await response.json();
+      
+      if (data.reply) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: data.reply },
+        ]);
+      } else if (data.error) {
+        console.error("Backend error:", data.error);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `SYSTEM_ERROR: ${data.error}` },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error connecting to Python backend:", error);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "CONNECTION_ERROR: Python backend unreachable." },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <>
@@ -50,12 +108,10 @@ export default function CyberSharkChat() {
                 },
               }}
             >
-              <Image
-                src="/image/shark-e1598377583126.png"
+              <img
+                src="/image/shark.png"
                 alt="Cyber Shark"
-                width={80}
-                height={80}
-                className="drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]"
+                className="h-20 w-20 object-contain drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]"
               />
             </motion.div>
           </motion.div>
@@ -94,9 +150,9 @@ export default function CyberSharkChat() {
                   SYSTEM_INITIALIZED: Ready for input...
                 </div>
               )}
-              {messages.map((m) => (
+              {messages.map((m, idx) => (
                 <div
-                  key={m.id}
+                  key={idx}
                   className={`flex flex-col ${
                     m.role === "user" ? "items-end" : "items-start"
                   }`}
@@ -115,23 +171,30 @@ export default function CyberSharkChat() {
                   </div>
                 </div>
               ))}
+              {isLoading && (
+                <div className="text-green-500/50 text-xs animate-pulse">
+                  CYBER_SHARK is processing...
+                </div>
+              )}
             </div>
 
             {/* Input Area */}
             <form
-              onSubmit={handleSubmit}
+              onSubmit={handleFormSubmit}
               className="p-3 border-t border-green-500/30 bg-green-500/5 flex gap-2"
             >
               <input
                 className="flex-1 bg-transparent border-none outline-none text-green-500 placeholder:text-green-900 text-sm"
-                value={input}
-                placeholder="TYPE_MESSAGE..."
-                onChange={handleInputChange}
+                value={inputValue}
+                placeholder={isLoading ? "SYSTEM_BUSY..." : "TYPE_MESSAGE..."}
+                onChange={(e) => setInputValue(e.target.value)}
+                disabled={isLoading}
                 autoFocus
               />
               <button
                 type="submit"
-                className="text-green-500 hover:text-white transition-colors"
+                className="text-green-500 hover:text-white transition-colors disabled:opacity-50"
+                disabled={isLoading || !inputValue.trim()}
               >
                 <Send size={18} />
               </button>
