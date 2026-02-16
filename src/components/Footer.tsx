@@ -19,7 +19,7 @@ export default function Footer() {
             GitHub Repo
           </Link>
           <span className="text-zinc-800">•</span>
-          <Link href="https://discord.gg" target="_blank" className="hover:text-amber-400 transition-colors">
+          <Link href="https://discord.gg/42jFb86RCq" target="_blank" className="hover:text-amber-400 transition-colors">
             Discord Community
           </Link>
         </div>
@@ -29,7 +29,7 @@ export default function Footer() {
           <Link href="https://github.com/S1M0NTheFirst/LB_Leetcothon_v.1.0" target="_blank">
             <Github className="w-6 h-6 text-zinc-500 hover:text-amber-500 hover:scale-110 transition-all cursor-pointer" />
           </Link>
-          <Link href="https://discord.gg" target="_blank">
+          <Link href="https://discord.gg/42jFb86RCq" target="_blank">
             <MessageCircle className="w-6 h-6 text-zinc-500 hover:text-amber-500 hover:scale-110 transition-all cursor-pointer" />
           </Link>
         </div>
