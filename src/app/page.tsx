@@ -1,14 +1,17 @@
 import CountdownTimer from "@/components/CountdownTimer";
 import RegistrationCounter from "@/components/RegistrationCounter";
-import SignInButton from "@/components/SignInButton";
 import Logo from "@/components/Logo";
 import * as motion from "framer-motion/client";
 import Playbook from "@/components/Playbook";
+import Link from "next/link";
+import { Zap } from "lucide-react";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white selection:bg-blue-500/30 overflow-x-hidden">
       <div className="max-w-5xl mx-auto px-6 pt-24 pb-16 flex flex-col items-center text-center">
+        {/* ... existing Hero, Countdown, Stats, About sections ... */}
+        {/* (Skipping for brevity in replace call context) */}
         {/* Hero Section */}
         <div className="space-y-6 flex flex-col items-center">
           <Logo className="w-24 h-24 mb-4" />
@@ -142,6 +145,25 @@ export default function Home() {
 
         {/* Playbook Section */}
         <Playbook />
+
+        {/* Enrollment CTA Section */}
+        <section className="w-full flex flex-col items-center justify-center py-20 mt-10 border-t border-amber-900/20">
+          <h2 className="text-2xl font-mono text-zinc-300 mb-6">
+            READY TO JOIN THE GAUNTLET?
+          </h2>
+          
+          <Link 
+            href="/enroll"
+            className="bg-amber-500 text-black px-8 py-4 text-lg font-bold uppercase tracking-wider rounded border-2 border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:shadow-[0_0_50px_rgba(245,158,11,0.6)] hover:bg-amber-400 hover:scale-105 transition-all flex items-center gap-3"
+          >
+            <Zap className="w-6 h-6 fill-current" />
+            INITIATE ENROLLMENT
+          </Link>
+
+          <p className="text-amber-500/80 text-sm mt-4 font-mono animate-pulse">
+            Confirm your registration and receive 5 INITIAL BOOT POINTS.
+          </p>
+        </section>
       </div>
     </main>
   );
