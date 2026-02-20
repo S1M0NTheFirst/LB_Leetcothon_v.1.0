@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { loginWithAzure } from "@/lib/actions";
 import Logo from "./Logo";
-import { User, Terminal, Coins, BarChart2, Home } from "lucide-react";
+import { User, Terminal, Coins, BarChart2, Home, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -13,6 +13,7 @@ export default function Navbar() {
 
   const navLinks = [
     { name: "Home", href: "/", icon: Home },
+    { name: "Enroll", href: "/enroll", icon: UserPlus },
     { name: "The Arena", href: "/arena", icon: Terminal },
     { name: "Prediction Pool", href: "/pool", icon: Coins },
     { name: "Live Intel", href: "/leaderboard", icon: BarChart2 },
