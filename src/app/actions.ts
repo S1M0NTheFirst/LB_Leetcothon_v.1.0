@@ -5,7 +5,7 @@ import { db, TABLE_NAME } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 
-export async function enrollUser() {
+export async function enrollUser(experienceLevel: "beginner" | "experienced") {
   const session = await auth();
   if (!session?.user?.email) {
     return { success: false, error: "Not authenticated" };
@@ -16,11 +16,12 @@ export async function enrollUser() {
       new UpdateCommand({
         TableName: TABLE_NAME,
         Key: { email: session.user.email },
-        UpdateExpression: "SET points = :p, isEnrolled = :e, enrolledAt = :d",
+        UpdateExpression: "SET points = :p, isEnrolled = :e, enrolledAt = :d, experienceLevel = :l",
         ExpressionAttributeValues: {
           ":p": 5,
           ":e": true,
           ":d": new Date().toISOString(),
+          ":l": experienceLevel,
         },
       })
     );

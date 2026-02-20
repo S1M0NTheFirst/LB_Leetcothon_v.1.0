@@ -1,93 +1,32 @@
-"use client";
-
-import { useState, useTransition } from "react";
+import { auth } from "@/auth";
+import { db, TABLE_NAME } from "@/lib/db";
+import { GetCommand } from "@aws-sdk/lib-dynamodb";
+import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ShieldAlert, CheckCircle2, Terminal, Loader2, XCircle } from "lucide-react";
-import { enrollUser } from "@/app/actions";
+import { Terminal } from "lucide-react";
 
-type EnrollmentResult = {
-  success: boolean;
-  message?: string;
-  error?: string;
-} | null;
+import { EnrollmentForm } from "./EnrollmentForm";
 
-export default function EnrollmentPage() {
-  const [isPending, startTransition] = useTransition();
-  const [enrollmentResult, setEnrollmentResult] = useState<EnrollmentResult>(null);
+export default async function EnrollmentPage() {
+  const session = await auth();
+  if (!session?.user?.email) {
+    redirect("/api/auth/signin");
+  }
 
-  const handleEnrollment = () => {
-    startTransition(async () => {
-      const result = await enrollUser();
-      setEnrollmentResult(result);
-    });
-  };
-
-  const renderInitialState = () => (
-    <>
-      <div className="flex items-center gap-3 mb-6">
-        <ShieldAlert className="w-6 h-6 text-amber-500" />
-        <h1 className="text-amber-500 font-mono text-xl uppercase tracking-wider">
-          SECURITY CLEARANCE REQUIRED // ENROLLMENT
-        </h1>
-      </div>
-      <p className="text-zinc-400 mb-8 font-mono leading-relaxed text-sm">
-        By proceeding, you commit to the LB Leetcothon protocols. You will be held accountable for the 7-Day Sprint. Cowardice is not an option.
-      </p>
-      <div className="bg-amber-900/20 border border-amber-500/50 p-4 rounded mb-8">
-        <p className="text-amber-500 font-mono text-xs flex items-center gap-2">
-          <Terminal className="w-4 h-4" />
-          SYSTEM REWARD: 5 Points will be credited to your profile upon confirmation.
-        </p>
-      </div>
-      <button
-        onClick={handleEnrollment}
-        disabled={isPending}
-        className="w-full bg-amber-500 text-black font-bold py-4 rounded hover:bg-amber-400 transition-all active:scale-[0.98] font-mono tracking-widest flex items-center justify-center gap-2 disabled:opacity-50"
-      >
-        {isPending ? <><Loader2 className="w-5 h-5 animate-spin" /> PROCESSING...</> : 'CONFIRM_ENROLLMENT'}
-      </button>
-    </>
-  );
-
-  const renderSuccessState = () => (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex items-center gap-3 mb-6">
-        <CheckCircle2 className="w-6 h-6 text-amber-500" />
-        <h2 className="text-amber-500 font-mono text-xl uppercase tracking-wider">
-          UPLINK ESTABLISHED // SUCCESS
-        </h2>
-      </div>
-      <p className="text-zinc-300 mb-8 font-mono leading-relaxed">
-        Operative recognized. <span className="text-amber-400">5 Points</span> have been deposited to your ledger.
-      </p>
-      <Link
-        href="/arena"
-        className="block w-full text-center border border-amber-500 text-amber-500 py-4 rounded hover:bg-amber-500 hover:text-black transition-all font-bold font-mono tracking-widest"
-      >
-        ENTER THE ARENA &gt;
-      </Link>
-    </div>
-  );
-  
-  const renderErrorState = () => (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex items-center gap-3 mb-6">
-        <XCircle className="w-6 h-6 text-red-500" />
-        <h2 className="text-red-500 font-mono text-xl uppercase tracking-wider">
-          ENROLLMENT FAILED
-        </h2>
-      </div>
-      <p className="text-zinc-300 mb-8 font-mono leading-relaxed">
-        There was an error processing your enrollment: <span className="text-red-400">{enrollmentResult?.error}</span>
-      </p>
-      <Link
-        href="/profile"
-        className="block w-full text-center border border-zinc-500 text-zinc-300 py-4 rounded hover:bg-zinc-700 hover:text-white transition-all font-bold font-mono tracking-widest"
-      >
-        RETURN TO PROFILE
-      </Link>
-    </div>
-  )
+  let isEnrolled = false;
+  try {
+    const { Item } = await db.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: { email: session.user.email },
+      })
+    );
+    if (Item?.isEnrolled) {
+      isEnrolled = true;
+    }
+  } catch (error) {
+    console.error("Failed to fetch user enrollment status:", error);
+  }
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-6 text-white selection:bg-amber-500/30">
@@ -98,7 +37,27 @@ export default function EnrollmentPage() {
         <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-amber-500/50" />
         <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-amber-500/50" />
 
-        {!enrollmentResult ? renderInitialState() : enrollmentResult.success ? renderSuccessState() : renderErrorState()}
+        {isEnrolled ? (
+          <div className="animate-in fade-in">
+            <div className="flex items-center gap-3 mb-6">
+              <Terminal className="w-6 h-6 text-amber-500" />
+              <h1 className="text-amber-500 font-mono text-xl uppercase tracking-wider">
+                STATUS // ALREADY ENROLLED
+              </h1>
+            </div>
+            <p className="text-zinc-400 mb-8 font-mono leading-relaxed text-sm">
+              Operative, your ledger is already active. You cannot enroll twice.
+            </p>
+            <Link
+              href="/arena"
+              className="block w-full text-center border border-amber-500 text-amber-500 py-4 rounded hover:bg-amber-500 hover:text-black transition-all font-bold font-mono tracking-widest"
+            >
+              RETURN TO ARENA &gt;
+            </Link>
+          </div>
+        ) : (
+          <EnrollmentForm />
+        )}
       </div>
     </main>
   );
