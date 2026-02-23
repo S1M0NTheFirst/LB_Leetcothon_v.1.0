@@ -29,14 +29,19 @@ export default function CountdownTimer({ targetDate }: { targetDate: string }) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-    setTimeLeft(calculateTimeLeft());
-    
+    const mountTimer = setTimeout(() => {
+      setIsMounted(true);
+      setTimeLeft(calculateTimeLeft());
+    }, 0);
+
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(mountTimer);
+      clearInterval(timer);
+    };
   }, [calculateTimeLeft]);
 
   if (!isMounted || !timeLeft) {
@@ -47,6 +52,7 @@ export default function CountdownTimer({ targetDate }: { targetDate: string }) {
         </div>
       );
     }
+    // Render a placeholder or null on the server and initial client render
     return <div className="h-32"></div>;
   }
 

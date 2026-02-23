@@ -32,17 +32,34 @@ export default function RegistrationCounter() {
   const { data, error } = useSWR("/api/user-count", fetcher, {
     refreshInterval: 5000,
   });
-
-  const [digits, setDigits] = useState<string[]>(["0", "0", "0"]);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (data && typeof data.count === "number") {
-      const countStr = data.count.toString().padStart(3, "0");
-      setDigits(countStr.split(""));
-    }
-  }, [data]);
+    const mountTimer = setTimeout(() => {
+      setIsMounted(true);
+    }, 0);
+    return () => clearTimeout(mountTimer);
+  }, []);
+
+  const count = data && typeof data.count === "number" ? data.count : 0;
+  const digits = count.toString().padStart(3, "0").split("");
 
   if (error) return null;
+
+  if (!isMounted) {
+    return (
+      <div className="flex flex-col items-center gap-4 mt-8">
+        <p className="text-sm font-bold uppercase tracking-[0.2em] text-white/40">
+          Live Registrations
+        </p>
+        <div className="flex gap-2">
+          {["0", "0", "0"].map((digit, idx) => (
+            <Digit key={`${idx}-${digit}`} value={digit} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-4 mt-8">

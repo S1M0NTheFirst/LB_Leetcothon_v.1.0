@@ -38,18 +38,14 @@ export default function LockedSection({ title }: LockedSectionProps) {
   }, [targetDate]);
 
   const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft());
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
 
     return () => clearInterval(timer);
   }, [calculateTimeLeft]);
-
-  if (!isMounted) return null;
 
   return (
     <main className="relative min-h-screen bg-[#0a0a0a] flex items-center justify-center overflow-hidden px-6 pt-16">
