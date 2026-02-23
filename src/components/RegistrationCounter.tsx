@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+// import { useEffect, useState } from "react"; // Removed useState and useEffect
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -33,14 +33,8 @@ export default function RegistrationCounter() {
     refreshInterval: 5000,
   });
 
-  const [digits, setDigits] = useState<string[]>(["0", "0", "0"]);
-
-  useEffect(() => {
-    if (data && typeof data.count === "number") {
-      const countStr = data.count.toString().padStart(3, "0");
-      setDigits(countStr.split(""));
-    }
-  }, [data]);
+  const count = data && typeof data.count === "number" ? data.count : 0;
+  const digits = count.toString().padStart(3, "0").split("");
 
   if (error) return null;
 

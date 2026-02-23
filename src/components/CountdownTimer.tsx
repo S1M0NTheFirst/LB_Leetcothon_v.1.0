@@ -25,13 +25,9 @@ export default function CountdownTimer({ targetDate }: { targetDate: string }) {
     return timeLeft;
   }, [targetDate]);
 
-  const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(calculateTimeLeft());
 
   useEffect(() => {
-    setIsMounted(true);
-    setTimeLeft(calculateTimeLeft());
-    
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
@@ -39,15 +35,12 @@ export default function CountdownTimer({ targetDate }: { targetDate: string }) {
     return () => clearInterval(timer);
   }, [calculateTimeLeft]);
 
-  if (!isMounted || !timeLeft) {
-    if (isMounted && !timeLeft) {
-      return (
-        <div className="text-2xl font-bold text-center p-4">
-          The event has started!
-        </div>
-      );
-    }
-    return <div className="h-32"></div>;
+  if (!timeLeft) {
+    return (
+      <div className="text-2xl font-bold text-center p-4">
+        The event has started!
+      </div>
+    );
   }
 
   return (
