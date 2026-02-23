@@ -25,22 +25,35 @@ export default function CountdownTimer({ targetDate }: { targetDate: string }) {
     return timeLeft;
   }, [targetDate]);
 
-  const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(calculateTimeLeft());
+  const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    const mountTimer = setTimeout(() => {
+      setIsMounted(true);
+      setTimeLeft(calculateTimeLeft());
+    }, 0);
+
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(mountTimer);
+      clearInterval(timer);
+    };
   }, [calculateTimeLeft]);
 
-  if (!timeLeft) {
-    return (
-      <div className="text-2xl font-bold text-center p-4">
-        The event has started!
-      </div>
-    );
+  if (!isMounted || !timeLeft) {
+    if (isMounted && !timeLeft) {
+      return (
+        <div className="text-2xl font-bold text-center p-4">
+          The event has started!
+        </div>
+      );
+    }
+    // Render a placeholder or null on the server and initial client render
+    return <div className="h-32"></div>;
   }
 
   return (
