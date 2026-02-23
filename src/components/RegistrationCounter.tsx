@@ -53,7 +53,7 @@ export default function RegistrationCounter() {
           Live Registrations
         </p>
         <div className="flex gap-2">
-          {["0", "0", "0"].map((digit, idx) => (
+          {["0", "0", "0"].map((digit: string, idx: number) => (
             <Digit key={`${idx}-${digit}`} value={digit} />
           ))}
         </div>
@@ -67,7 +67,7 @@ export default function RegistrationCounter() {
         Live Registrations
       </p>
       <div className="flex gap-2">
-        {digits.map((digit, idx) => (
+        {digits.map((digit: string, idx: number) => (
           <Digit key={`${idx}-${digit}`} value={digit} />
         ))}
       </div>
