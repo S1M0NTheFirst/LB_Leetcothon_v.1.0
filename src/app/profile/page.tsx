@@ -1,8 +1,6 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { auth, signIn, signOut } from "@/auth";
 import Link from "next/link";
-import { ArrowLeft, LogOut } from "lucide-react";
-import { signOut } from "@/auth";
+import { ArrowLeft, LogOut, LogIn } from "lucide-react";
 import ProfileEditor from "@/components/ProfileEditor";
 import { db, TABLE_NAME } from "@/lib/db";
 import { GetCommand } from "@aws-sdk/lib-dynamodb";
@@ -11,7 +9,41 @@ export default async function ProfilePage() {
   const session = await auth();
 
   if (!session?.user?.email) {
-    redirect("/api/auth/signin");
+    return (
+      <main className="min-h-screen bg-zinc-950 text-white pt-24 pb-16 px-6 selection:bg-amber-500/30">
+        <div className="max-w-2xl mx-auto">
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 text-zinc-400 hover:text-amber-400 transition-colors mb-8 group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            Back to Home
+          </Link>
+
+          <div className="bg-zinc-900 border border-amber-500/30 rounded-lg p-8 md:p-12 shadow-[0_0_40px_rgba(245,158,11,0.1)] relative overflow-hidden flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mb-6 border border-zinc-700">
+              <LogIn className="w-10 h-10 text-zinc-500" />
+            </div>
+            <h1 className="text-3xl font-black mb-4 tracking-tight">Profile Locked</h1>
+            <p className="text-zinc-400 mb-8 max-w-sm">
+              Sign in with your CSULB account to track your progress, earn points, and climb the leaderboard.
+            </p>
+            <form
+              action={async () => {
+                "use server";
+                await signIn("microsoft-entra-id");
+              }}
+              className="w-full"
+            >
+              <button className="w-full py-4 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-md transition-all flex items-center justify-center gap-2 group shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                <LogIn className="w-5 h-5" />
+                Sign In to Join the Challenge
+              </button>
+            </form>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   let user = session.user;
