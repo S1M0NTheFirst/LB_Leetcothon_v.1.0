@@ -8,6 +8,7 @@ export default auth((req) => {
   const isPublicRoute = 
     nextUrl.pathname === "/" ||
     nextUrl.pathname === "/profile" ||
+    nextUrl.pathname.startsWith("/image") ||
     nextUrl.pathname.startsWith("/api/auth") ||
     nextUrl.pathname.startsWith("/_next") ||
     nextUrl.pathname.startsWith("/static") ||

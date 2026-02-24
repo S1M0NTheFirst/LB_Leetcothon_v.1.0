@@ -150,7 +150,7 @@ export default function CyberSharkChat() {
             >
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-                  <img src="/image/shark3.png" className="w-16 h-16 opacity-20 grayscale" alt="Shark Placeholder" />
+                  <img src="/image/shark.png" className="w-16 h-16 opacity-20 grayscale" alt="Shark Placeholder" />
                   <div className="text-amber-500/30 text-[10px] tracking-[0.3em] uppercase">
                     LONG BEACH LEETCOTHON1.0
                   </div>
@@ -166,7 +166,7 @@ export default function CyberSharkChat() {
                 >
                   {m.role === "assistant" && (
                     <img 
-                      src="/image/shark3.png" 
+                      src="/image/shark.png" 
                       className="w-10 h-10 rounded-full border border-amber-500/50 bg-black p-1 shadow-[0_0_10px_rgba(245,158,11,0.3)] shrink-0" 
                       alt="Cyber Shark Avatar"
                     />
@@ -187,7 +187,7 @@ export default function CyberSharkChat() {
               {isLoading && (
                 <div className="flex items-center gap-3">
                   <img 
-                    src="/image/shark3.png" 
+                    src="/image/shark.png" 
                     className="w-10 h-10 rounded-full border border-amber-500/50 bg-black p-1 animate-pulse shrink-0" 
                     alt="Loading"
                   />
