@@ -52,3 +52,31 @@ Currently, we are building the **Landing Page** and **Authentication System**.
     - If user is NOT logged in -> Redirect to `/api/auth/signin` (Microsoft).
     - If user IS logged in -> Allow access to `/`.
     - **Exceptions:** Allow access to `/_next` (static files), `/api/auth` (login routes), and `/favicon.ico`.
+
+
+## Tech Stack
+- **Framework:** Next.js 15 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS + Lucide React (for icons)
+- **Database:** AWS DynamoDB (Single Table Design)
+- **Backend:** Python FastAPI (handling scoring and event logic)
+- **State Management:** TanStack Query (React Query)
+- **Editor:** `@monaco-editor/react`
+- **Code Execution:** Judge0 API (or Piston API)
+
+## Design System & UI Rules
+- **Theme:** "CSULB Gold & Black" meets "Dark Mode Hacker".
+- **Colors:** Primary: `#FFC72C` (CSULB Gold), Background: `#111111`, Text: `#FFFFFF`
+
+## Specific Features: The Arena
+1.  **Arena Layout:**
+    - **The Playground:** An unlocked practice section containing 5 problem boxes (4 standard algorithms + 1 high-point bonus challenge).
+    - **Event Sections:** 7 distinct sections (Days 1-7) that remain visually locked (using Lucide lock icons) until their respective release dates.
+2.  **The Code Editor:**
+    - Must use Monaco Editor for a VS Code-like experience.
+    - **Run Button:** Executes code against a visible public test case.
+    - **Submit Button:** Evaluates code against hidden test cases, returning execution time, memory usage, and awarding points based on efficiency.
+
+## Authentication Rules
+- The home page is public. 
+- The profile page requires authentication to view stats. Logging in registers the user to the Live Counter.
