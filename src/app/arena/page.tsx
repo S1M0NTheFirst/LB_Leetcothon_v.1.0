@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Lock, Play, Trophy, Terminal, Cpu, Code2, Sparkles, Activity } from "lucide-react";
+import { Lock, Play, Trophy, Terminal, Cpu, Code2, Sparkles, Activity, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useDailyProblems, Difficulty } from "@/hooks/useDailyProblems";
 
 interface ProblemCardProps {
   title: string;
-  difficulty: "Easy" | "Medium" | "Hard" | "Legendary";
+  difficulty: Difficulty | "Legendary";
   points: number;
   isBonus?: boolean;
 }
@@ -44,7 +45,7 @@ const ProblemCard = ({ title, difficulty, points, isBonus }: ProblemCardProps) =
         </span>
       </div>
 
-      <h3 className={`text-lg font-bold mb-1 ${isBonus ? "text-[#FFC72C]" : "text-white"}`}>
+      <h3 className={`text-lg font-bold mb-1 truncate ${isBonus ? "text-[#FFC72C]" : "text-white"}`} title={title}>
         {title}
       </h3>
       <p className="text-white/40 text-xs font-mono mb-6 uppercase tracking-wider">
@@ -70,6 +71,18 @@ const ProblemCard = ({ title, difficulty, points, isBonus }: ProblemCardProps) =
     </motion.div>
   );
 };
+
+const SkeletonCard = () => (
+  <div className="p-6 rounded-xl border border-white/10 bg-white/5 animate-pulse">
+    <div className="flex justify-between items-start mb-4">
+      <div className="w-9 h-9 bg-white/10 rounded-lg" />
+      <div className="w-16 h-5 bg-white/10 rounded" />
+    </div>
+    <div className="w-3/4 h-6 bg-white/10 rounded mb-2" />
+    <div className="w-1/2 h-4 bg-white/10 rounded mb-6" />
+    <div className="w-full h-10 bg-white/10 rounded-lg" />
+  </div>
+);
 
 interface EventRowProps {
   day: number;
@@ -110,14 +123,9 @@ const EventRow = ({ day, date }: EventRowProps) => {
 
 export default function ArenaPage() {
   const [hackersCoding] = useState(12);
+  const [level, setLevel] = useState<"beginner" | "experienced">("beginner");
 
-  const playgroundProblems = [
-    { title: "Two Sum", difficulty: "Easy", points: 1 },
-    { title: "Longest Substring", difficulty: "Medium", points: 2 },
-    { title: "Merge K Lists", difficulty: "Hard", points: 3 },
-    { title: "Median of Sorted", difficulty: "Hard", points: 4 },
-    { title: "Cyber Shark's Gambit", difficulty: "Legendary", points: 5, isBonus: true },
-  ] as const;
+  const { data: problems, isLoading, isFetching } = useDailyProblems(level);
 
   const mainEvents = [
     { day: 1, date: "March 30, 2026" },
@@ -137,8 +145,7 @@ export default function ArenaPage() {
           <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic">
             THE <span className="text-[#FFC72C]">ARENA</span>
           </h1>
-          <p className="text-white/40 font-mono mt-2 uppercase tracking-widest text-sm">
-            Select a terminal and begin the protocol.
+          <p className="text-white/40 font-mono mt-2 uppercase tracking-widest text-sm"> 
           </p>
         </div>
 
@@ -149,6 +156,27 @@ export default function ArenaPage() {
               <Cpu className="text-[#FFC72C] w-6 h-6" />
               <h2 className="text-xl font-bold uppercase tracking-widest">The Playground</h2>
               <div className="h-[1px] flex-1 bg-gradient-to-r from-[#FFC72C]/50 to-transparent" />
+              
+              {/* Level Toggle */}
+              <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10">
+                <button
+                  onClick={() => setLevel("beginner")}
+                  className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                    level === "beginner" ? "bg-[#FFC72C] text-black" : "text-white/40 hover:text-white"
+                  }`}
+                >
+                  Beginner
+                </button>
+                <button
+                  onClick={() => setLevel("experienced")}
+                  className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                    level === "experienced" ? "bg-[#FFC72C] text-black" : "text-white/40 hover:text-white"
+                  }`}
+                >
+                  Experienced
+                </button>
+              </div>
+
               <span className="text-[10px] font-mono text-[#FFC72C] border border-[#FFC72C]/20 px-2 py-1 rounded animate-pulse">
                 UNLOCKED
               </span>
@@ -166,10 +194,26 @@ export default function ArenaPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {playgroundProblems.map((prob, idx) => (
-              <ProblemCard key={idx} {...prob} />
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 relative">
+            {isLoading || (isFetching && !problems) ? (
+              Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
+            ) : (
+              problems?.map((prob, idx) => (
+                <ProblemCard 
+                  key={prob.id} 
+                  title={prob.title}
+                  difficulty={prob.difficulty}
+                  points={prob.points}
+                  isBonus={idx === 4} // Assuming last one is bonus as per requirements
+                />
+              ))
+            )}
+            {isFetching && problems && (
+               <div className="absolute -top-6 right-0 flex items-center gap-2 text-[10px] font-mono text-[#FFC72C]">
+                 <Loader2 className="w-3 h-3 animate-spin" />
+                 REFRESHING...
+               </div>
+            )}
           </div>
         </section>
 
