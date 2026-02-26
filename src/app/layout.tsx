@@ -4,7 +4,6 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import CyberSharkChat from "@/components/CyberSharkChat";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,7 +36,6 @@ export default function RootLayout({
             {children}
           </div>
           <Footer />
-          <CyberSharkChat />
         </Providers>
       </body>
     </html>

@@ -5,21 +5,19 @@ import * as motion from "framer-motion/client";
 import Playbook from "@/components/Playbook";
 import Link from "next/link";
 import { Zap } from "lucide-react";
+import CyberSharkChat from "@/components/CyberSharkChat";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white selection:bg-blue-500/30 overflow-x-hidden">
       <div className="max-w-5xl mx-auto px-6 pt-24 pb-16 flex flex-col items-center text-center">
-        {/* ... existing Hero, Countdown, Stats, About sections ... */}
-        {/* (Skipping for brevity in replace call context) */}
-        {/* Hero Section */}
+        {/* ... Hero Section ... */}
         <div className="space-y-6 flex flex-col items-center">
           <Logo className="w-24 h-24 mb-4" />
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40">
             LB Leetcothon
           </h1>
           
-          {/* Terminal Schedule Line */}
           <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/10 rounded-lg font-mono text-sm md:text-base mb-2">
             <span className="text-white/30">$</span>
             <span className="text-green-400">Monday, March 30 00:00 am - Sunday, April 5 8:00 pm</span>
@@ -31,13 +29,13 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Countdown Section */}
+        {/* ... Countdown ... */}
         <div className="mt-20 w-full max-w-3xl">
           <h2 className="text-sm font-bold uppercase tracking-widest text-blue-500 mb-4">Leetcothon Starts In</h2>
           <CountdownTimer targetDate="2026-03-30T00:00:00" />
         </div>
 
-        {/* Stats Section with Badge */}
+        {/* ... Stats ... */}
         <div className="relative w-full">
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
             <span className="px-3 py-1 bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold uppercase tracking-wider rounded-full backdrop-blur-sm">
@@ -47,7 +45,7 @@ export default function Home() {
           <RegistrationCounter />
         </div>
         
-        {/* About Section */}
+        {/* ... About Section ... */}
         <motion.section 
           initial={{ opacity: 0, scale: 0.9, y: 40, filter: "blur(10px)" }}
           whileInView={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
@@ -64,10 +62,8 @@ export default function Home() {
           }}
           className="mt-32 w-full max-w-4xl relative"
         >
-          {/* Decorative Grid Background */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] -z-10" />
 
-          {/* Terminal Window Decoration */}
           <div className="bg-[#111] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
             <div className="bg-white/5 border-b border-white/10 px-6 py-3 flex items-center gap-2">
               <div className="flex gap-1.5">
@@ -140,13 +136,10 @@ export default function Home() {
           </div>
         </motion.section>
 
-        {/* Divider */}
         <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-32" />
 
-        {/* Playbook Section */}
         <Playbook />
 
-        {/* Enrollment CTA Section */}
         <section className="w-full flex flex-col items-center justify-center py-20 mt-10 border-t border-amber-900/20">
           <h2 className="text-2xl font-mono text-zinc-300 mb-6">
             READY TO JOIN THE GAUNTLET?
@@ -165,6 +158,7 @@ export default function Home() {
           </p>
         </section>
       </div>
+      <CyberSharkChat />
     </main>
   );
 }
