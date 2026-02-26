@@ -1,7 +1,10 @@
 import os
 import uvicorn
 import logging
-from fastapi import FastAPI
+import random
+from datetime import date
+from typing import Literal
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import google.generativeai as genai
@@ -10,6 +13,34 @@ from dotenv import load_dotenv
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Mock Database
+EASY_PROBLEMS = [
+    {"id": "e1", "title": "Two Sum", "difficulty": "Easy"},
+    {"id": "e2", "title": "Valid Parentheses", "difficulty": "Easy"},
+    {"id": "e3", "title": "Merge Two Sorted Lists", "difficulty": "Easy"},
+    {"id": "e4", "title": "Best Time to Buy and Sell Stock", "difficulty": "Easy"},
+    {"id": "e5", "title": "Valid Palindrome", "difficulty": "Easy"},
+    {"id": "e6", "title": "Single Number", "difficulty": "Easy"},
+]
+
+MEDIUM_PROBLEMS = [
+    {"id": "m1", "title": "Add Two Numbers", "difficulty": "Medium"},
+    {"id": "m2", "title": "Longest Substring Without Repeating Characters", "difficulty": "Medium"},
+    {"id": "m3", "title": "Longest Palindromic Substring", "difficulty": "Medium"},
+    {"id": "m4", "title": "3Sum", "difficulty": "Medium"},
+    {"id": "m5", "title": "Container With Most Water", "difficulty": "Medium"},
+    {"id": "m6", "title": "Reverse Integer", "difficulty": "Medium"},
+]
+
+HARD_PROBLEMS = [
+    {"id": "h1", "title": "Median of Two Sorted Arrays", "difficulty": "Hard"},
+    {"id": "h2", "title": "Regular Expression Matching", "difficulty": "Hard"},
+    {"id": "h3", "title": "Merge k Sorted Lists", "difficulty": "Hard"},
+    {"id": "h4", "title": "Reverse Nodes in k-Group", "difficulty": "Hard"},
+    {"id": "h5", "title": "First Missing Positive", "difficulty": "Hard"},
+    {"id": "h6", "title": "Trapping Rain Water", "difficulty": "Hard"},
+]
 
 # Load .env variables from multiple possible locations
 load_dotenv(".env.local")
@@ -49,6 +80,35 @@ app.add_middleware(
 # API: ChatRequest class
 class ChatRequest(BaseModel):
     message: str
+
+@app.get("/api/problems/daily")
+async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(...)):
+    today_str = date.today().isoformat()
+    random.seed(today_str)
+    
+    selected_raw = []
+    if level == "beginner":
+        # 4 Easy, 1 Medium
+        selected_raw.extend(random.sample(EASY_PROBLEMS, 4))
+        selected_raw.extend(random.sample(MEDIUM_PROBLEMS, 1))
+    else:
+        # 1 Easy, 3 Medium, 1 Hard
+        selected_raw.extend(random.sample(EASY_PROBLEMS, 1))
+        selected_raw.extend(random.sample(MEDIUM_PROBLEMS, 3))
+        selected_raw.extend(random.sample(HARD_PROBLEMS, 1))
+    
+    # Reset seed
+    random.seed(None)
+    
+    # Assign points 1 to 5 to COPIES of the problems
+    final_problems = []
+    for i, prob in enumerate(selected_raw):
+        # Create a copy so we don't mutate the global mock data
+        prob_copy = prob.copy()
+        prob_copy["points"] = i + 1
+        final_problems.append(prob_copy)
+        
+    return final_problems
 
 # API: /chat endpoint
 @app.post("/chat")
