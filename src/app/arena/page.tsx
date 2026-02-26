@@ -4,15 +4,17 @@ import { useState } from "react";
 import { Lock, Play, Trophy, Terminal, Cpu, Code2, Sparkles, Activity, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useDailyProblems, Difficulty } from "@/hooks/useDailyProblems";
+import Link from "next/link";
 
 interface ProblemCardProps {
+  id: string;
   title: string;
   difficulty: Difficulty | "Legendary";
   points: number;
   isBonus?: boolean;
 }
 
-const ProblemCard = ({ title, difficulty, points, isBonus }: ProblemCardProps) => {
+const ProblemCard = ({ id, title, difficulty, points, isBonus }: ProblemCardProps) => {
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
@@ -52,7 +54,8 @@ const ProblemCard = ({ title, difficulty, points, isBonus }: ProblemCardProps) =
         Worth <span className={isBonus ? "text-[#FFC72C] font-bold" : "text-white/80 font-bold"}>{points}</span> {points === 1 ? "Point" : "Points"}
       </p>
 
-      <button
+      <Link 
+        href={`/arena/problem/${id}`}
         className={`w-full py-2 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
           isBonus
             ? "bg-[#FFC72C] text-black hover:bg-[#FFC72C]/90 shadow-[0_0_15px_rgba(255,199,44,0.3)]"
@@ -61,7 +64,7 @@ const ProblemCard = ({ title, difficulty, points, isBonus }: ProblemCardProps) =
       >
         <Play className="w-4 h-4" />
         ENTER
-      </button>
+      </Link>
 
       {isBonus && (
         <div className="absolute -top-2 -right-2 bg-[#FFC72C] text-black text-[10px] font-black px-2 py-0.5 rounded shadow-lg transform rotate-12">
@@ -201,6 +204,7 @@ export default function ArenaPage() {
               problems?.map((prob, idx) => (
                 <ProblemCard 
                   key={prob.id} 
+                  id={prob.id}
                   title={prob.title}
                   difficulty={prob.difficulty}
                   points={prob.points}
