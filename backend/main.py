@@ -4,69 +4,31 @@ import logging
 import random
 from datetime import date
 from typing import Literal
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import google.generativeai as genai
 from dotenv import load_dotenv
+from database import PROBLEMS_DB
+from execute import router as execute_router
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Mock Database
-EASY_PROBLEMS = [
-    {"id": "e1", "title": "Two Sum", "difficulty": "Easy"},
-    {"id": "e2", "title": "Valid Parentheses", "difficulty": "Easy"},
-    {"id": "e3", "title": "Merge Two Sorted Lists", "difficulty": "Easy"},
-    {"id": "e4", "title": "Best Time to Buy and Sell Stock", "difficulty": "Easy"},
-    {"id": "e5", "title": "Valid Palindrome", "difficulty": "Easy"},
-    {"id": "e6", "title": "Single Number", "difficulty": "Easy"},
-]
-
-MEDIUM_PROBLEMS = [
-    {"id": "m1", "title": "Add Two Numbers", "difficulty": "Medium"},
-    {"id": "m2", "title": "Longest Substring Without Repeating Characters", "difficulty": "Medium"},
-    {"id": "m3", "title": "Longest Palindromic Substring", "difficulty": "Medium"},
-    {"id": "m4", "title": "3Sum", "difficulty": "Medium"},
-    {"id": "m5", "title": "Container With Most Water", "difficulty": "Medium"},
-    {"id": "m6", "title": "Reverse Integer", "difficulty": "Medium"},
-]
-
-HARD_PROBLEMS = [
-    {"id": "h1", "title": "Median of Two Sorted Arrays", "difficulty": "Hard"},
-    {"id": "h2", "title": "Regular Expression Matching", "difficulty": "Hard"},
-    {"id": "h3", "title": "Merge k Sorted Lists", "difficulty": "Hard"},
-    {"id": "h4", "title": "Reverse Nodes in k-Group", "difficulty": "Hard"},
-    {"id": "h5", "title": "First Missing Positive", "difficulty": "Hard"},
-    {"id": "h6", "title": "Trapping Rain Water", "difficulty": "Hard"},
-]
-
-# Load .env variables from multiple possible locations
+# Load .env variables
 load_dotenv(".env.local")
 load_dotenv(".env")
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env.local"))
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 api_key = os.getenv("GOOGLE_GENERATIVE_AI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-
-if not api_key:
-    logger.error("CRITICAL ERROR: Google API Key not found in environment.")
-else:
-    logger.info("API Key loaded successfully.")
+if api_key:
     genai.configure(api_key=api_key)
-
-# Function to read event context from file
-def get_event_context():
-    try:
-        with open(os.path.join(os.path.dirname(__file__), "event_context.txt"), "r") as f:
-            return f.read()
-    except Exception as e:
-        logger.error(f"Error reading event_context.txt: {e}")
-        return "SYSTEM: You are a helpful assistant."
 
 # Initialize FastAPI app
 app = FastAPI()
+
+# Include Routers
+app.include_router(execute_router)
 
 # Add CORSMiddleware
 app.add_middleware(
@@ -77,64 +39,42 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API: ChatRequest class
-class ChatRequest(BaseModel):
-    message: str
+# Function to read event context from file
+def get_event_context():
+    try:
+        with open(os.path.join(os.path.dirname(__file__), "event_context.txt"), "r") as f:
+            return f.read()
+    except Exception:
+        return "SYSTEM: You are a helpful assistant."
 
 @app.get("/api/problems/daily")
 async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(...)):
-    today_str = date.today().isoformat()
-    random.seed(today_str)
-    
-    selected_raw = []
-    if level == "beginner":
-        # 4 Easy, 1 Medium
-        selected_raw.extend(random.sample(EASY_PROBLEMS, 4))
-        selected_raw.extend(random.sample(MEDIUM_PROBLEMS, 1))
-    else:
-        # 1 Easy, 3 Medium, 1 Hard
-        selected_raw.extend(random.sample(EASY_PROBLEMS, 1))
-        selected_raw.extend(random.sample(MEDIUM_PROBLEMS, 3))
-        selected_raw.extend(random.sample(HARD_PROBLEMS, 1))
-    
-    # Reset seed
-    random.seed(None)
-    
-    # Assign points 1 to 5 to COPIES of the problems
-    final_problems = []
-    for i, prob in enumerate(selected_raw):
-        # Create a copy so we don't mutate the global mock data
-        prob_copy = prob.copy()
-        prob_copy["points"] = i + 1
-        final_problems.append(prob_copy)
-        
-    return final_problems
+    # Use real problems from database
+    problems = PROBLEMS_DB.get(level, [])
+    # Return all 5 problems for that level
+    return problems
 
-# API: /chat endpoint
+@app.get("/api/problems/{problem_id}")
+async def get_problem_by_id(problem_id: str):
+    for level in ["beginner", "experienced"]:
+        for problem in PROBLEMS_DB[level]:
+            if problem["id"] == problem_id:
+                return problem
+    raise HTTPException(status_code=404, detail="Problem not found")
+
+class ChatRequest(BaseModel):
+    message: str
+
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    logger.info(f"Incoming request: {request.message}")
     try:
-        # Load the context fresh from the file for each request (allows hot-swapping)
         event_context = get_event_context()
-        
         model = genai.GenerativeModel("gemini-2.0-flash")
         prompt = f"{event_context}\nUSER: {request.message}"
         response = model.generate_content(prompt)
-        
-        # Check if response has text (safety filters might block it)
-        try:
-            reply_text = response.text
-            logger.info("Response generated successfully.")
-            return {"reply": reply_text}
-        except ValueError:
-            logger.warning("Response was blocked by safety filters.")
-            return {"reply": "ERROR: PROTOCOL_VIOLATION. RESPONSE_BLOCKED_BY_SAFETY_FILTERS."}
-            
+        return {"reply": response.text}
     except Exception as e:
-        logger.error(f"Execution Error: {str(e)}")
         return {"error": str(e)}
 
-# Execution: Run on port 8005
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8005)
