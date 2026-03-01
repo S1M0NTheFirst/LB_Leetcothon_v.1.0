@@ -200,12 +200,12 @@ export default function ProblemSolvingPage() {
                   <section>
                     <h2 className="text-lg font-bold text-white mb-2">{problem?.title || "Loading..."}</h2>
                     <div 
-                      className="prose prose-invert prose-sm max-w-none 
+                      className={`prose prose-invert prose-sm max-w-none 
                         prose-p:text-white/70 prose-p:leading-relaxed
                         prose-code:text-[#FFC72C] prose-code:bg-white/5 prose-code:px-1 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
                         prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 prose-pre:p-4
                         prose-ul:list-disc prose-ul:ml-4 prose-li:mb-1
-                        prose-strong:text-white prose-strong:font-bold"
+                        prose-strong:text-white prose-strong:font-bold`}
                       dangerouslySetInnerHTML={{ __html: problem?.description || "Loading problem description..." }}
                     />
                   </section>
