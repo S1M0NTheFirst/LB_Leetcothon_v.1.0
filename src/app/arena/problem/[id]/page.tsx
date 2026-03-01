@@ -260,10 +260,22 @@ export default function ProblemSolvingPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4 text-white/40">
-                      <Bookmark className="w-4 h-4 hover:text-white cursor-pointer transition-colors" />
-                      <Settings className="w-4 h-4 hover:text-white cursor-pointer transition-colors" />
-                      <RotateCcw onClick={resetCode} className="w-4 h-4 hover:text-white cursor-pointer transition-colors" title="Reset to default code" />
-                      <Maximize2 className="w-4 h-4 hover:text-white cursor-pointer transition-colors" />
+                      <button className="hover:text-white transition-colors" title="Bookmark">
+                        <Bookmark className="w-4 h-4" />
+                      </button>
+                      <button className="hover:text-white transition-colors" title="Settings">
+                        <Settings className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={resetCode} 
+                        className="hover:text-white transition-colors" 
+                        title="Reset to default code"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </button>
+                      <button className="hover:text-white transition-colors" title="Maximize">
+                        <Maximize2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
 
