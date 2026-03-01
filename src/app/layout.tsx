@@ -1,10 +1,12 @@
+"use client";
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import CyberSharkChat from "@/components/CyberSharkChat";
+import { usePathname } from "next/navigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,10 +18,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "LB Leetcothon | CSULB Coding Challenge",
-  description: "The Ultimate CSULB Spring Break Coding Challenge. Level up your skills and compete for FAANG+.",
-};
+function ConditionalFooter() {
+  const pathname = usePathname();
+  if (pathname !== "/") return null;
+  return <Footer />;
+}
 
 export default function RootLayout({
   children,
@@ -33,11 +36,10 @@ export default function RootLayout({
       >
         <Providers>
           <Navbar />
-          <div className="pt-16">
+          <div className="pt-16 min-h-screen">
             {children}
           </div>
-          <Footer />
-          <CyberSharkChat />
+          <ConditionalFooter />
         </Providers>
       </body>
     </html>

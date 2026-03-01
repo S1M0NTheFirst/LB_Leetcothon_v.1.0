@@ -2,8 +2,16 @@
 
 import { Github, MessageCircle, UserPlus, Zap } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
+  const pathname = usePathname();
+  
+  // Hide footer on arena problem pages for full-screen experience
+  if (pathname?.startsWith("/arena/problem/")) {
+    return null;
+  }
+
   return (
     <footer className="w-full bg-black border-t border-amber-900/20 py-12 mt-20">
       <div className="max-w-5xl mx-auto px-6 flex flex-col items-center justify-center gap-8">
