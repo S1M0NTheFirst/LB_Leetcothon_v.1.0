@@ -70,12 +70,19 @@ Currently, we are building the **Landing Page** and **Authentication System**.
 
 ## Specific Features: The Arena
 1.  **Arena Layout:**
-    - **The Playground:** An unlocked practice section containing 5 problem boxes (4 standard algorithms + 1 high-point bonus challenge).
+    - **The Playground:** An unlocked practice section containing 5 problem boxes (4 standard algorithms + 1 high-point bonus challenge) populated dynamically based on user experience level.
     - **Event Sections:** 7 distinct sections (Days 1-7) that remain visually locked (using Lucide lock icons) until their respective release dates.
-2.  **The Code Editor:**
-    - Must use Monaco Editor for a VS Code-like experience.
-    - **Run Button:** Executes code against a visible public test case.
-    - **Submit Button:** Evaluates code against hidden test cases, returning execution time, memory usage, and awarding points based on efficiency.
+2.  **Problem Description & UI (LeetCode Clone):**
+    - Must use a resizable split-screen layout (e.g., `react-resizable-panels`).
+    - **Left Pane:** Problem description rendered exactly like LeetCode (Markdown formatting, highlighted Example inputs/outputs, and a strict Constraints section).
+    - **Terminal/Console (Bottom Right):** Dynamic tabs for "Testcase" and "Test Result". Must include LeetCode-style pill buttons for selecting test cases and dark gray output boxes.
+    - **Submission Success:** Authentic stat cards displaying Judge0 execution metrics (Runtime in ms, Memory in MB, and simulated "Beats %" stats with icons) matching LeetCode's dark mode UI.
+3.  **The Code Editor:**
+    - Must use `@monaco-editor/react` (`vs-dark` theme) for an authentic VS Code-like experience.
+    - **Multi-Language Support:** Users must be able to select and write code in Python (`python`), C (`c`), C++ (`cpp`), or Java (`java`) via a dropdown.
+    - **Code Persistence:** Automatically save the user's drafted code to browser `localStorage` (keyed by problem ID and language) so it survives page refreshes.
+    - **Run Button:** Sends code to the backend to execute against visible public test cases via Judge0.
+    - **Submit Button:** Sends code to the backend, prepends/appends hidden Driver Code, and evaluates against hidden test cases. Awards points based on successful evaluation.
 
 ## Authentication Rules
 - The home page is public. 

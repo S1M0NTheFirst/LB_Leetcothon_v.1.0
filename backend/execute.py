@@ -34,7 +34,7 @@ class SubmitRequest(BaseModel):
     code: str
     language_id: int
 
-async def execute_python_with_evaluation(user_code: str, problem_id: str, language_id: int):
+async def execute_with_evaluation(user_code: str, problem_id: str, language_id: int):
     # 1. Find the problem
     problem = None
     for level in ["beginner", "experienced"]:
@@ -47,18 +47,21 @@ async def execute_python_with_evaluation(user_code: str, problem_id: str, langua
     if not problem:
         return {"error": "Problem not found"}
 
-    # 2. Build the combined script
-    prepended = COMMON_IMPORTS
-    if "ListNode" in user_code and "class ListNode" not in problem['python_driver_code']:
-        prepended += LIST_NODE_DEF
-
-    combined_code = f"{prepended}\n{user_code}\n\n{problem['python_driver_code']}"
+    # 2. Build the combined script based on language
+    prepended = ""
+    combined_code = user_code
     
-    # DEBUG: Print the code being sent to Judge0
-    logger.info("--- START OF EXECUTED CODE ---")
-    logger.info(combined_code)
-    logger.info("--- END OF EXECUTED CODE ---")
-
+    # Python specific logic
+    if language_id == 71: # Python
+        prepended = COMMON_IMPORTS
+        if "ListNode" in user_code and "class ListNode" not in problem.get('python_driver_code', ''):
+            prepended += LIST_NODE_DEF
+        driver = problem.get('python_driver_code', '')
+        combined_code = f"{prepended}\n{user_code}\n\n{driver}"
+    
+    # TODO: Add driver code support for C++, Java, C if available in DB
+    # For now, non-python languages just run the user code (Simple Run)
+    
     # 3. Send to Judge0
     payload = {
         "source_code": combined_code,
@@ -74,45 +77,45 @@ async def execute_python_with_evaluation(user_code: str, problem_id: str, langua
         stdout = result.get("stdout") or ""
         stderr = result.get("stderr") or ""
         
-        if "PASS|" in stdout:
-            runtime_beats = round(random.uniform(75.00, 99.99), 2)
-            memory_beats = round(random.uniform(75.00, 99.99), 2)
-            return {
-                "status": {"description": "Accepted", "id": 3},
-                "runtime_ms": result.get("time"),
-                "runtime_beats": runtime_beats,
-                "memory_mb": result.get("memory"),
-                "memory_beats": memory_beats,
-                "stdout": stdout.replace("PASS|ALL_CASES_PASSED", "").strip()
-            }
-        elif "FAIL|" in stdout or "ERROR|" in stdout or stderr:
-            return {
-                "status": {"description": "Wrong Answer", "id": 4},
-                "message": (stdout + "\n" + stderr).strip()
-            }
-        else:
-            return {
-                "status": result.get("status"),
-                "stdout": stdout,
-                "stderr": stderr,
-                "compile_output": result.get("compile_output")
-            }
+        # Validation Logic
+        if language_id == 71: # Python validation
+            if "PASS|" in stdout:
+                runtime_beats = round(random.uniform(75.00, 99.99), 2)
+                memory_beats = round(random.uniform(75.00, 99.99), 2)
+                return {
+                    "status": {"description": "Accepted", "id": 3},
+                    "runtime_ms": result.get("time"),
+                    "runtime_beats": runtime_beats,
+                    "memory_mb": result.get("memory"),
+                    "memory_beats": memory_beats,
+                    "stdout": stdout.replace("PASS|ALL_CASES_PASSED", "").strip()
+                }
+            elif "FAIL|" in stdout or "ERROR|" in stdout or stderr:
+                return {
+                    "status": {"description": "Wrong Answer", "id": 4},
+                    "message": (stdout + "\n" + stderr).strip()
+                }
+        
+        # Default for other languages or simple runs
+        return {
+            "status": result.get("status"),
+            "stdout": stdout,
+            "stderr": stderr,
+            "compile_output": result.get("compile_output"),
+            "runtime_ms": result.get("time"),
+            "memory_mb": result.get("memory")
+        }
 
 @router.post("/run")
 async def run_code(request: RunRequest):
     logger.info(f"Running code for problem: {request.problem_id}")
-    
-    # If we have a problem_id, run with evaluation for a better UI experience
     if request.problem_id:
         try:
-            result = await execute_python_with_evaluation(request.code, request.problem_id, request.language_id)
-            if "error" in result:
-                raise HTTPException(status_code=404, detail=result["error"])
-            return result
+            return await execute_with_evaluation(request.code, request.problem_id, request.language_id)
         except Exception as e:
             logger.error(f"Execution Error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
-
+    
     # Fallback to simple execution if no problem_id
     prepended = COMMON_IMPORTS
     if "ListNode" in request.code: prepended += LIST_NODE_DEF
@@ -130,13 +133,14 @@ async def run_code(request: RunRequest):
             result = response.json()
             return result
     except Exception as e:
+        logger.error(f"Simple Run Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/submit")
 async def submit_code(request: SubmitRequest):
     logger.info(f"Submitting code for problem: {request.problem_id}")
     try:
-        result = await execute_python_with_evaluation(request.code, request.problem_id, request.language_id)
+        result = await execute_with_evaluation(request.code, request.problem_id, request.language_id)
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
         return result

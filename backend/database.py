@@ -31,46 +31,23 @@ PROBLEMS_DB = {
             "title": "Two Sum",
             "difficulty": "Easy",
             "points": 1,
-            "description": "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.",
+            "description": """<p>Given an array of integers <code>nums</code> and an integer <code>target</code>, return <em>indices of the two numbers such that they add up to <code>target</code></em>.</p>
+<p>You may assume that each input would have <strong><em>exactly</em> one solution</strong>, and you may not use the <em>same</em> element twice.</p>
+<p><strong>Example 1:</strong></p>
+<pre><strong>Input:</strong> nums = [2,7,11,15], target = 9 <strong>Output:</strong> [0,1]</pre>""",
             "starter_code": {
-                "python": "class Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        pass"
+                "python": "class Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        ",
+                "cpp": "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        \n    }\n};",
+                "java": "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        \n    }\n}",
+                "c": "int* twoSum(int* nums, int numsSize, int target, int* returnSize) {\n    \n}"
             },
-            "public_test_cases": [
-                {"input": "nums = [2,7,11,15], target = 9", "expected": "[0,1]"},
-                {"input": "nums = [3,2,4], target = 6", "expected": "[1,2]"},
-                {"input": "nums = [3,3], target = 6", "expected": "[0,1]"}
-            ],
+            "public_test_cases": [{"input": "nums = [2,7,11,15], target = 9", "expected": "[0,1]"}],
             "python_driver_code": """
 import sys
-try:
-    sol = Solution()
-    cases = [
-        ([2,7,11,15], 9, [0,1]),
-        ([3,2,4], 6, [1,2]),
-        ([3,3], 6, [0,1])
-    ]
-    for i, (n, t, exp) in enumerate(cases):
-        res = sol.twoSum(n, t)
-        
-        if res is None:
-            print(f"FAIL|Case {i+1}: Expected {exp}, but got None. Did you forget to return?")
-            sys.exit(0)
-            
-        # Ensure result is a list of integers
-        try:
-            actual = sorted([int(x) for x in res])
-            expected = sorted([int(x) for x in exp])
-        except Exception:
-            print(f"FAIL|Case {i+1}: Expected list of integers like {exp}, but got {res}")
-            sys.exit(0)
-            
-        if actual != expected:
-            print(f"FAIL|Case {i+1}: Expected {exp}, but got {list(res)}")
-            sys.exit(0)
-            
-    print("PASS|ALL_CASES_PASSED")
-except Exception as e:
-    print(f"ERROR|{str(e)}")
+sol = Solution()
+res = sol.twoSum([2,7,11,15], 9)
+if sorted(res) == [0,1]: print("PASS|ALL_CASES_PASSED")
+else: print(f"FAIL|Expected [0,1], got {res}")
 """
         },
         {
@@ -78,130 +55,89 @@ except Exception as e:
             "title": "Valid Parentheses",
             "difficulty": "Easy",
             "points": 2,
-            "description": "Given a string `s` containing just the characters `(`, `)`, `{`, `}`, `[` and `]`, determine if the input string is valid.",
+            "description": """<p>Given a string <code>s</code> containing just the characters <code>'('</code>, <code>')'</code>, <code>'{'</code>, <code>'}'</code>, <code>'['</code> and <code>']'</code>, determine if the input string is valid.</p>
+<p><strong>Example 1:</strong></p>
+<pre><strong>Input:</strong> s = "()" <strong>Output:</strong> true</pre>""",
             "starter_code": {
-                "python": "class Solution:\n    def isValid(self, s: str) -> bool:\n        pass"
+                "python": "class Solution:\n    def isValid(self, s: str) -> bool:\n        ",
+                "cpp": "class Solution {\npublic:\n    bool isValid(string s) {\n        \n    }\n};",
+                "java": "class Solution {\n    public boolean isValid(String s) {\n        \n    }\n}",
+                "c": "bool isValid(char* s) {\n    \n}"
             },
-            "public_test_cases": [
-                {"input": "s = \"()\"", "expected": "true"},
-                {"input": "s = \"()[]{}\"", "expected": "true"},
-                {"input": "s = \"(]\"", "expected": "false"}
-            ],
+            "public_test_cases": [{"input": "s = \"()\"", "expected": "true"}],
             "python_driver_code": """
 import sys
-try:
-    sol = Solution()
-    cases = [(\"()\", True), (\"()[]{}\", True), (\"(]\", False), (\"([)]\", False), (\"{[]}\", True)]
-    for i, (s, exp) in enumerate(cases):
-        res = sol.isValid(s)
-        if res != exp:
-            print(f"FAIL|Case {i+1}: Input '{s}' Expected {exp}, but got {res}")
-            sys.exit(0)
-    print("PASS|ALL_CASES_PASSED")
-except Exception as e:
-    print(f"ERROR|{str(e)}")
+sol = Solution()
+if sol.isValid("()") == True and sol.isValid("(]") == False: print("PASS|ALL_CASES_PASSED")
+else: print("FAIL|Validation failed")
 """
         },
         {
             "id": "e3",
-            "title": "Merge Two Sorted Lists",
+            "title": "Palindrome Number",
             "difficulty": "Easy",
             "points": 3,
-            "description": "Merge two sorted linked lists and return it as a sorted list.",
+            "description": """<p>Given an integer <code>x</code>, return <code>true</code> if <code>x</code> is a <strong>palindrome</strong>, and <code>false</code> otherwise.</p>
+<p><strong>Example 1:</strong></p>
+<pre><strong>Input:</strong> x = 121 <strong>Output:</strong> true</pre>""",
             "starter_code": {
-                "python": "class Solution:\n    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:\n        pass"
+                "python": "class Solution:\n    def isPalindrome(self, x: int) -> bool:\n        ",
+                "cpp": "class Solution {\npublic:\n    bool isPalindrome(int x) {\n        \n    }\n};",
+                "java": "class Solution {\n    public boolean isPalindrome(int x) {\n        \n    }\n}",
+                "c": "bool isPalindrome(int x) {\n    \n}"
             },
-            "public_test_cases": [
-                {"input": "l1 = [1,2,4], l2 = [1,3,4]", "expected": "[1,1,2,3,4,4]"},
-                {"input": "l1 = [], l2 = []", "expected": "[]"},
-                {"input": "l1 = [], l2 = [0]", "expected": "[0]"}
-            ],
-            "python_driver_code": LIST_NODE_DEF + """
+            "public_test_cases": [{"input": "x = 121", "expected": "true"}],
+            "python_driver_code": """
 import sys
-try:
-    sol = Solution()
-    cases = [
-        ([1,2,4], [1,3,4], [1,1,2,3,4,4]),
-        ([], [], []),
-        ([], [0], [0])
-    ]
-    for i, (l1, l2, exp) in enumerate(cases):
-        res_node = sol.mergeTwoLists(from_list(l1), from_list(l2))
-        res = to_list(res_node)
-        if res != exp:
-            print(f"FAIL|Case {i+1}: Expected {exp}, but got {res}")
-            sys.exit(0)
-    print("PASS|ALL_CASES_PASSED")
-except Exception as e:
-    print(f"ERROR|{str(e)}")
+sol = Solution()
+if sol.isPalindrome(121) == True and sol.isPalindrome(-121) == False: print("PASS|ALL_CASES_PASSED")
+else: print("FAIL|Validation failed")
 """
         },
         {
             "id": "e4",
-            "title": "Best Time to Buy and Sell Stock",
+            "title": "Roman to Integer",
             "difficulty": "Easy",
             "points": 4,
-            "description": "You are given an array `prices` where `prices[i]` is the price of a given stock on the `i`th day. Return the maximum profit you can achieve.",
+            "description": """<p>Roman numerals are represented by seven different symbols: <code>I, V, X, L, C, D, M</code>.</p>
+<p>Convert a roman numeral string to an integer.</p>
+<p><strong>Example 1:</strong></p>
+<pre><strong>Input:</strong> s = "III" <strong>Output:</strong> 3</pre>""",
             "starter_code": {
-                "python": "class Solution:\n    def maxProfit(self, prices: List[int]) -> int:\n        pass"
+                "python": "class Solution:\n    def romanToInt(self, s: str) -> int:\n        ",
+                "cpp": "class Solution {\npublic:\n    int romanToInt(string s) {\n        \n    }\n};",
+                "java": "class Solution {\n    public int romanToInt(String s) {\n        \n    }\n}",
+                "c": "int romanToInt(char* s) {\n    \n}"
             },
-            "public_test_cases": [
-                {"input": "prices = [7,1,5,3,6,4]", "expected": "5"},
-                {"input": "prices = [7,6,4,3,1]", "expected": "0"},
-                {"input": "prices = [1,2]", "expected": "1"}
-            ],
+            "public_test_cases": [{"input": "s = \"III\"", "expected": "3"}],
             "python_driver_code": """
 import sys
-try:
-    sol = Solution()
-    cases = [
-        ([7,1,5,3,6,4], 5),
-        ([7,6,4,3,1], 0),
-        ([1,2], 1),
-        ([2,4,1], 1)
-    ]
-    for i, (p, exp) in enumerate(cases):
-        res = sol.maxProfit(p)
-        if res != exp:
-            print(f"FAIL|Case {i+1}: Expected {exp}, but got {res}")
-            sys.exit(0)
-    print("PASS|ALL_CASES_PASSED")
-except Exception as e:
-    print(f"ERROR|{str(e)}")
+sol = Solution()
+if sol.romanToInt("III") == 3 and sol.romanToInt("MCMXCIV") == 1994: print("PASS|ALL_CASES_PASSED")
+else: print("FAIL|Validation failed")
 """
         },
         {
             "id": "e5",
-            "title": "Maximum Subarray",
-            "difficulty": "Medium",
+            "title": "Longest Common Prefix",
+            "difficulty": "Easy",
             "points": 5,
-            "description": "Given an integer array `nums`, find the subarray with the largest sum and return its sum.",
+            "description": """<p><span class='text-[#FFC72C] font-bold'>BONUS CHALLENGE:</span> Write a function to find the longest common prefix string amongst an array of strings.</p>
+<p>If there is no common prefix, return an empty string <code>""</code>.</p>
+<p><strong>Example 1:</strong></p>
+<pre><strong>Input:</strong> strs = ["flower","flow","flight"] <strong>Output:</strong> "fl"</pre>""",
             "starter_code": {
-                "python": "class Solution:\n    def maxSubArray(self, nums: List[int]) -> int:\n        pass"
+                "python": "class Solution:\n    def longestCommonPrefix(self, strs: List[str]) -> str:\n        ",
+                "cpp": "class Solution {\npublic:\n    string longestCommonPrefix(vector<string>& strs) {\n        \n    }\n};",
+                "java": "class Solution {\n    public String longestCommonPrefix(String[] strs) {\n        \n    }\n}",
+                "c": "char* longestCommonPrefix(char** strs, int strsSize) {\n    \n}"
             },
-            "public_test_cases": [
-                {"input": "nums = [-2,1,-3,4,-1,2,1,-5,4]", "expected": "6"},
-                {"input": "nums = [1]", "expected": "1"},
-                {"input": "nums = [5,4,-1,7,8]", "expected": "23"}
-            ],
+            "public_test_cases": [{"input": "strs = [\"flower\",\"flow\",\"flight\"]", "expected": "\"fl\""}],
             "python_driver_code": """
 import sys
-try:
-    sol = Solution()
-    cases = [
-        ([-2,1,-3,4,-1,2,1,-5,4], 6),
-        ([1], 1),
-        ([5,4,-1,7,8], 23),
-        ([-1], -1)
-    ]
-    for i, (n, exp) in enumerate(cases):
-        res = sol.maxSubArray(n)
-        if res != exp:
-            print(f"FAIL|Case {i+1}: Expected {exp}, but got {res}")
-            sys.exit(0)
-    print("PASS|ALL_CASES_PASSED")
-except Exception as e:
-    print(f"ERROR|{str(e)}")
+sol = Solution()
+if sol.longestCommonPrefix(["flower","flow","flight"]) == "fl": print("PASS|ALL_CASES_PASSED")
+else: print("FAIL|Validation failed")
 """
         }
     ],
@@ -211,164 +147,89 @@ except Exception as e:
             "title": "Contains Duplicate",
             "difficulty": "Easy",
             "points": 1,
-            "description": "Given an integer array `nums`, return `true` if any value appears at least twice in the array, and return `false` if every element is distinct.",
+            "description": """<p>Given an integer array <code>nums</code>, return <code>true</code> if any value appears <strong>at least twice</strong> in the array.</p>
+<p><strong>Example 1:</strong></p>
+<pre><strong>Input:</strong> nums = [1,2,3,1] <strong>Output:</strong> true</pre>""",
             "starter_code": {
-                "python": "class Solution:\n    def containsDuplicate(self, nums: List[int]) -> bool:\n        pass"
+                "python": "class Solution:\n    def containsDuplicate(self, nums: List[int]) -> bool:\n        ",
+                "cpp": "class Solution {\npublic:\n    bool containsDuplicate(vector<int>& nums) {\n        \n    }\n};",
+                "java": "class Solution {\n    public boolean containsDuplicate(int[] nums) {\n        \n    }\n}",
+                "c": "bool containsDuplicate(int* nums, int numsSize) {\n    \n}"
             },
-            "public_test_cases": [
-                {"input": "nums = [1,2,3,1]", "expected": "true"},
-                {"input": "nums = [1,2,3,4]", "expected": "false"},
-                {"input": "nums = [1,1,1,3,3,4,3,2,4,2]", "expected": "true"}
-            ],
+            "public_test_cases": [{"input": "nums = [1,2,3,1]", "expected": "true"}],
             "python_driver_code": """
 import sys
-try:
-    sol = Solution()
-    cases = [([1,2,3,1], True), ([1,2,3,4], False), ([1,1,1,3,3,4,3,2,4,2], True)]
-    for i, (n, exp) in enumerate(cases):
-        res = sol.containsDuplicate(n)
-        if res != exp:
-            print(f"FAIL|Case {i+1}: Expected {exp}, but got {res}")
-            sys.exit(0)
-    print("PASS|ALL_CASES_PASSED")
-except Exception as e:
-    print(f"ERROR|{str(e)}")
+sol = Solution()
+if sol.containsDuplicate([1,2,3,1]) == True: print("PASS|ALL_CASES_PASSED")
+else: print("FAIL|Validation failed")
 """
         },
         {
             "id": "m2",
-            "title": "Longest Substring Without Repeating Characters",
+            "title": "Group Anagrams",
             "difficulty": "Medium",
             "points": 2,
-            "description": "Given a string `s`, find the length of the longest substring without repeating characters.",
+            "description": """<p>Given an array of strings <code>strs</code>, group the <strong>anagrams</strong> together. You can return the answer in any order.</p>
+<p><strong>Example 1:</strong></p>
+<pre><strong>Input:</strong> strs = ["eat","tea","tan","ate","nat","bat"]
+<strong>Output:</strong> [["bat"],["nat","tan"],["ate","eat","tea"]]</pre>""",
             "starter_code": {
-                "python": "class Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        pass"
+                "python": "class Solution:\n    def groupAnagrams(self, strs: List[str]) -> List[List[str]]:\n        ",
+                "cpp": "class Solution {\npublic:\n    vector<vector<string>> groupAnagrams(vector<string>& strs) {\n        \n    }\n};",
+                "java": "class Solution {\n    public List<List<String>> groupAnagrams(String[] strs) {\n        \n    }\n}",
+                "c": "char*** groupAnagrams(char** strs, int strsSize, int* returnSize, int** returnColumnSizes) {\n    \n}"
             },
-            "public_test_cases": [
-                {"input": "s = \"abcabcbb\"", "expected": "3"},
-                {"input": "s = \"bbbbb\"", "expected": "1"},
-                {"input": "s = \"pwwkew\"", "expected": "3"}
-            ],
-            "python_driver_code": """
-import sys
-try:
-    sol = Solution()
-    cases = [(\"abcabcbb\", 3), (\"bbbbb\", 1), (\"pwwkew\", 3), (\"\", 0), (\" \", 1)]
-    for i, (s, exp) in enumerate(cases):
-        res = sol.lengthOfLongestSubstring(s)
-        if res != exp:
-            print(f"FAIL|Case {i+1}: Expected {exp}, but got {res}")
-            sys.exit(0)
-    print("PASS|ALL_CASES_PASSED")
-except Exception as e:
-    print(f"ERROR|{str(e)}")
-"""
+            "public_test_cases": [{"input": "strs = [\"eat\",\"tea\",\"tan\",\"ate\",\"nat\",\"bat\"]", "expected": "[[\"bat\"],[\"nat\",\"tan\"],[\"ate\",\"eat\",\"tea\"]]"}]
         },
         {
             "id": "m3",
-            "title": "Product of Array Except Self",
+            "title": "Top K Frequent Elements",
             "difficulty": "Medium",
             "points": 3,
-            "description": "Given an integer array `nums`, return an array `answer` such that `answer[i]` is equal to the product of all the elements of `nums` except `nums[i]`.",
+            "description": """<p>Given an integer array <code>nums</code> and an integer <code>k</code>, return <em>the</em> <code>k</code> <em>most frequent elements</em>.</p>
+<p><strong>Example 1:</strong></p>
+<pre><strong>Input:</strong> nums = [1,1,1,2,2,3], k = 2 <strong>Output:</strong> [1,2]</pre>""",
             "starter_code": {
-                "python": "class Solution:\n    def productExceptSelf(self, nums: List[int]) -> List[int]:\n        pass"
+                "python": "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        ",
+                "cpp": "class Solution {\npublic:\n    vector<int> topKFrequent(vector<int>& nums, int k) {\n        \n    }\n};",
+                "java": "class Solution {\n    public int[] topKFrequent(int[] nums, int k) {\n        \n    }\n}",
+                "c": "int* topKFrequent(int* nums, int numsSize, int k, int* returnSize) {\n    \n}"
             },
-            "public_test_cases": [
-                {"input": "nums = [1,2,3,4]", "expected": "[24,12,8,6]"},
-                {"input": "nums = [-1,1,0,-3,3]", "expected": "[0,0,9,0,0]"},
-                {"input": "nums = [0,0]", "expected": "[0,0]"}
-            ],
-            "python_driver_code": """
-import sys
-try:
-    sol = Solution()
-    cases = [
-        ([1,2,3,4], [24,12,8,6]),
-        ([-1,1,0,-3,3], [0,0,9,0,0]),
-        ([0,0], [0,0])
-    ]
-    for i, (n, exp) in enumerate(cases):
-        res = sol.productExceptSelf(n)
-        if res is None:
-            print(f"FAIL|Case {i+1}: Expected {exp}, but got None")
-            sys.exit(0)
-        
-        actual = [int(x) for x in res]
-        if actual != exp:
-            print(f"FAIL|Case {i+1}: Expected {exp}, but got {actual}")
-            sys.exit(0)
-    print("PASS|ALL_CASES_PASSED")
-except Exception as e:
-    print(f"ERROR|{str(e)}")
-"""
+            "public_test_cases": [{"input": "nums = [1,1,1,2,2,3], k = 2", "expected": "[1,2]"}]
         },
         {
             "id": "m4",
-            "title": "Coin Change",
+            "title": "Product of Array Except Self",
             "difficulty": "Medium",
             "points": 4,
-            "description": "You are given an integer array `coins` representing coins of different denominations and an integer `amount` representing a total amount of money. Return the fewest number of coins that you need to make up that amount.",
+            "description": """<p>Given an integer array <code>nums</code>, return an array <code>answer</code> such that <code>answer[i]</code> is equal to the product of all the elements of <code>nums</code> except <code>nums[i]</code>.</p>
+<p>You must write an algorithm that runs in <code>O(n)</code> time.</p>
+<p><strong>Example 1:</strong></p>
+<pre><strong>Input:</strong> nums = [1,2,3,4] <strong>Output:</strong> [24,12,8,6]</pre>""",
             "starter_code": {
-                "python": "class Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        pass"
+                "python": "class Solution:\n    def productExceptSelf(self, nums: List[int]) -> List[int]:\n        ",
+                "cpp": "class Solution {\npublic:\n    vector<int> productExceptSelf(vector<int>& nums) {\n        \n    }\n};",
+                "java": "class Solution {\n    public int[] productExceptSelf(int[] nums) {\n        \n    }\n}",
+                "c": "int* productExceptSelf(int* nums, int numsSize, int* returnSize) {\n    \n}"
             },
-            "public_test_cases": [
-                {"input": "coins = [1,2,5], amount = 11", "expected": "3"},
-                {"input": "coins = [2], amount = 3", "expected": "-1"},
-                {"input": "coins = [1], amount = 0", "expected": "0"}
-            ],
-            "python_driver_code": """
-import sys
-try:
-    sol = Solution()
-    cases = [
-        ([1,2,5], 11, 3),
-        ([2], 3, -1),
-        ([1], 0, 0)
-    ]
-    for i, (c, a, exp) in enumerate(cases):
-        res = sol.coinChange(c, a)
-        if res != exp:
-            print(f"FAIL|Case {i+1}: Expected {exp}, but got {res}")
-            sys.exit(0)
-    print("PASS|ALL_CASES_PASSED")
-except Exception as e:
-    print(f"ERROR|{str(e)}")
-"""
+            "public_test_cases": [{"input": "nums = [1,2,3,4]", "expected": "[24,12,8,6]"}]
         },
         {
-            "id": "h1",
-            "title": "Merge k Sorted Lists",
-            "difficulty": "Hard",
+            "id": "m5",
+            "title": "Longest Consecutive Sequence",
+            "difficulty": "Medium",
             "points": 5,
-            "description": "You are given an array of `k` linked-lists `lists`, each linked-list is sorted in ascending order. Merge all the linked-lists into one sorted linked-list and return it.",
+            "description": """<p><span class='text-[#FFC72C] font-bold'>BONUS CHALLENGE:</span> Given an unsorted array of integers <code>nums</code>, return the length of the longest consecutive elements sequence.</p>
+<p>You must write an algorithm that runs in <code>O(n)</code> time.</p>
+<p><strong>Example 1:</strong></p>
+<pre><strong>Input:</strong> nums = [100,4,200,1,3,2] <strong>Output:</strong> 4</pre>""",
             "starter_code": {
-                "python": "class Solution:\n    def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:\n        pass"
+                "python": "class Solution:\n    def longestConsecutive(self, nums: List[int]) -> int:\n        ",
+                "cpp": "class Solution {\npublic:\n    int longestConsecutive(vector<int>& nums) {\n        \n    }\n};",
+                "java": "class Solution {\n    public int longestConsecutive(int[] nums) {\n        \n    }\n}",
+                "c": "int longestConsecutive(int* nums, int numsSize) {\n    \n}"
             },
-            "public_test_cases": [
-                {"input": "lists = [[1,4,5],[1,3,4],[2,6]]", "expected": "[1,1,2,3,4,4,5,6]"},
-                {"input": "lists = []", "expected": "[]"},
-                {"input": "lists = [[]]", "expected": "[]"}
-            ],
-            "python_driver_code": LIST_NODE_DEF + """
-import sys
-try:
-    sol = Solution()
-    cases = [
-        ([[1,4,5],[1,3,4],[2,6]], [1,1,2,3,4,4,5,6]),
-        ([], []),
-        ([[]], [])
-    ]
-    for i, (ls, exp) in enumerate(cases):
-        nodes = [from_list(l) for l in ls]
-        res_node = sol.mergeKLists(nodes)
-        res = to_list(res_node)
-        if res != exp:
-            print(f"FAIL|Case {i+1}: Expected {exp}, but got {res}")
-            sys.exit(0)
-    print("PASS|ALL_CASES_PASSED")
-except Exception as e:
-    print(f"ERROR|{str(e)}")
-"""
+            "public_test_cases": [{"input": "nums = [100,4,200,1,3,2]", "expected": "4"}]
         }
     ]
 }

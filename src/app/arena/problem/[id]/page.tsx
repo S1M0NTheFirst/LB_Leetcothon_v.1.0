@@ -6,17 +6,24 @@ import Editor from "@monaco-editor/react";
 import { 
   Play, Send, Terminal as TerminalIcon, Code2, BookOpen, 
   AlertCircle, X, Loader2, Lock, Bookmark, Settings, 
-  RotateCcw, Maximize2, CheckSquare, Trophy, Cpu, Zap
+  RotateCcw, Maximize2, CheckSquare, Trophy, Cpu, Zap,
+  AlertTriangle, ArrowLeft
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 const LANGUAGES = [
   { id: "python", name: "Python", judge0Id: 71, editorLang: "python" },
+  { id: "cpp", name: "C++", judge0Id: 54, editorLang: "cpp" },
+  { id: "java", name: "Java", judge0Id: 62, editorLang: "java" },
+  { id: "c", name: "C", judge0Id: 50, editorLang: "c" },
 ];
 
 const STARTER_CODE: Record<string, string> = {
-  python: `class Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        # Write your code here\n        pass`,
+  python: `class Solution:\n    def solve(self, ...):\n        # Write your code here\n        pass`,
+  cpp: `class Solution {\npublic:\n    void solve() {\n        \n    }\n};`,
+  java: `class Solution {\n    public void solve() {\n        \n    }\n}`,
+  c: `void solve() {\n\n}`,
 };
 
 export default function ProblemSolvingPage() {
@@ -30,19 +37,26 @@ export default function ProblemSolvingPage() {
   const [activeCase, setActiveCase] = useState(0);
 
   // Fetch Problem Data
-  const { data: problem, isLoading: isProblemLoading } = useQuery({
+  const { data: problem, isLoading: isProblemLoading, error: fetchError } = useQuery({
     queryKey: ["problem", id],
     queryFn: async () => {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8005";
       const res = await fetch(`${baseUrl}/api/problems/${id}`);
-      if (!res.ok) throw new Error("Problem not found");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Problem not found");
+      }
       return res.json();
     },
+    retry: false,
   });
 
   // Persistence: Load code from localStorage
   useEffect(() => {
-    const savedCode = localStorage.getItem(`draft_code_${id}_${selectedLanguage.id}`);
+    if (!id) return;
+    const storageKey = `draft_code_${id}_${selectedLanguage.id}`;
+    const savedCode = localStorage.getItem(storageKey);
+    
     if (savedCode) {
       setCode(savedCode);
     } else if (problem?.starter_code?.[selectedLanguage.id]) {
@@ -63,7 +77,9 @@ export default function ProblemSolvingPage() {
   const handleEditorChange = (val: string | undefined) => {
     const newCode = val || "";
     setCode(newCode);
-    localStorage.setItem(`draft_code_${id}_${selectedLanguage.id}`, newCode);
+    if (id) {
+      localStorage.setItem(`draft_code_${id}_${selectedLanguage.id}`, newCode);
+    }
   };
 
   const runCodeMutation = useMutation({
@@ -129,6 +145,25 @@ export default function ProblemSolvingPage() {
     );
   }
 
+  if (fetchError || !problem) {
+    return (
+      <div className="h-screen bg-[#0a0a0a] flex flex-col items-center justify-center text-white p-6 text-center">
+        <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
+        <h2 className="text-2xl font-black uppercase italic mb-2 tracking-tighter">Problem Sync Error</h2>
+        <p className="text-white/40 font-mono text-sm max-w-md mb-8 uppercase">
+          {fetchError instanceof Error ? fetchError.message : "The requested problem ID could not be found in the current Arena database."}
+        </p>
+        <button 
+          onClick={() => router.push("/arena")}
+          className="px-8 py-3 bg-[#FFC72C] text-black font-black uppercase italic rounded-lg hover:scale-105 transition-transform flex items-center gap-2"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Arena
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-64px)] bg-[#0a0a0a] overflow-hidden text-white flex flex-col">
       {/* Top Header */}
@@ -164,9 +199,15 @@ export default function ProblemSolvingPage() {
                 <div className="space-y-6 text-sm text-white/70 leading-relaxed font-sans">
                   <section>
                     <h2 className="text-lg font-bold text-white mb-2">{problem?.title || "Loading..."}</h2>
-                    <div className="prose prose-invert prose-sm max-w-none">
-                      {problem?.description || "Loading problem description..."}
-                    </div>
+                    <div 
+                      className="prose prose-invert prose-sm max-w-none 
+                        prose-p:text-white/70 prose-p:leading-relaxed
+                        prose-code:text-[#FFC72C] prose-code:bg-white/5 prose-code:px-1 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
+                        prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 prose-pre:p-4
+                        prose-ul:list-disc prose-ul:ml-4 prose-li:mb-1
+                        prose-strong:text-white prose-strong:font-bold"
+                      dangerouslySetInnerHTML={{ __html: problem?.description || "Loading problem description..." }}
+                    />
                   </section>
 
                   {problem?.public_test_cases?.length > 0 && (
@@ -228,6 +269,7 @@ export default function ProblemSolvingPage() {
 
                   <div className="flex-1 overflow-hidden">
                     <Editor
+                      key={`${id}-${selectedLanguage.id}`}
                       height="100%"
                       theme="vs-dark"
                       language={selectedLanguage.editorLang}
@@ -297,7 +339,15 @@ export default function ProblemSolvingPage() {
 
                   <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                     {activeTab === 'result' && lastResult ? (
-                      resultType === 'submit' && lastResult.status?.description === "Accepted" ? (
+                      lastResult.error ? (
+                        <div className="space-y-4 border border-red-500/20 bg-red-500/5 p-4 rounded-xl">
+                           <div className="flex items-center gap-2 text-red-500">
+                             <AlertTriangle className="w-5 h-5" />
+                             <span className="font-bold uppercase tracking-tighter italic">Backend Error</span>
+                           </div>
+                           <p className="text-white/60 font-mono text-xs">{lastResult.error}</p>
+                        </div>
+                      ) : resultType === 'submit' && lastResult.status?.description === "Accepted" ? (
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                           <div className="flex items-center gap-4">
                             <div className="bg-green-500/20 p-3 rounded-2xl">

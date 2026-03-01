@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Lock, Play, Trophy, Terminal, Cpu, Code2, Sparkles, Activity, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useDailyProblems, Difficulty } from "@/hooks/useDailyProblems";
@@ -128,6 +128,20 @@ export default function ArenaPage() {
   const [hackersCoding] = useState(12);
   const [level, setLevel] = useState<"beginner" | "experienced">("beginner");
 
+  // Load level from localStorage on mount
+  useEffect(() => {
+    const savedLevel = localStorage.getItem("arena_level") as "beginner" | "experienced";
+    if (savedLevel && (savedLevel === "beginner" || savedLevel === "experienced")) {
+      setLevel(savedLevel);
+    }
+  }, []);
+
+  // Save level to localStorage when it changes
+  const handleLevelChange = (newLevel: "beginner" | "experienced") => {
+    setLevel(newLevel);
+    localStorage.setItem("arena_level", newLevel);
+  };
+
   const { data: problems, isLoading, isFetching } = useDailyProblems(level);
 
   const mainEvents = [
@@ -163,7 +177,7 @@ export default function ArenaPage() {
               {/* Level Toggle */}
               <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10">
                 <button
-                  onClick={() => setLevel("beginner")}
+                  onClick={() => handleLevelChange("beginner")}
                   className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-all ${
                     level === "beginner" ? "bg-[#FFC72C] text-black" : "text-white/40 hover:text-white"
                   }`}
@@ -171,7 +185,7 @@ export default function ArenaPage() {
                   Beginner
                 </button>
                 <button
-                  onClick={() => setLevel("experienced")}
+                  onClick={() => handleLevelChange("experienced")}
                   className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-all ${
                     level === "experienced" ? "bg-[#FFC72C] text-black" : "text-white/40 hover:text-white"
                   }`}
