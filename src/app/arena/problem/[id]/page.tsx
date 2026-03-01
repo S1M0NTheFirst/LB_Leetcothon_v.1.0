@@ -40,7 +40,7 @@ export default function ProblemSolvingPage() {
   const { data: problem, isLoading: isProblemLoading, error: fetchError } = useQuery({
     queryKey: ["problem", id],
     queryFn: async () => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8005";
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
       const res = await fetch(`${baseUrl}/api/problems/${id}`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
@@ -84,7 +84,7 @@ export default function ProblemSolvingPage() {
 
   const runCodeMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8005";
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
       const res = await fetch(`${baseUrl}/api/execute/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -102,7 +102,7 @@ export default function ProblemSolvingPage() {
 
   const submitCodeMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8005";
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
       const res = await fetch(`${baseUrl}/api/execute/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

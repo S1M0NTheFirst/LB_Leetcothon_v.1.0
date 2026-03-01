@@ -10,7 +10,7 @@ export interface Problem {
 }
 
 const fetchProblems = async (level: "beginner" | "experienced"): Promise<Problem[]> => {
-  const response = await fetch(`http://127.0.0.1:8005/api/problems/daily?level=${level}`);
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/problems/daily?level=${level}`);
   if (!response.ok) {
     throw new Error("Failed to fetch daily problems");
   }

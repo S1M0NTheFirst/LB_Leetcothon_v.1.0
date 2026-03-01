@@ -99,6 +99,14 @@ Currently, we are building the **Landing Page** and **Authentication System**.
     - A bottom dashboard showing the user's current available points.
     - An input field to enter the wager amount and a disabled "Place Bet" button.
 
+## Networking & API Rules
+- **Strict Environment Variables:** ALL frontend API calls to the FastAPI backend MUST use the `NEXT_PUBLIC_API_URL` environment variable.
+- **No Hardcoding:** Never hardcode `localhost`, `127.0.0.1`, or production URLs directly into fetch calls or Axios requests. 
+- **No Fallbacks:** Do not use local fallbacks in the code (e.g., `process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"`). The environment variable must be the sole source of truth.
+- **URL Construction:** Always construct endpoints using template literals without a trailing slash on the base URL.
+  - *Correct:* \`\${process.env.NEXT_PUBLIC_API_URL}/api/execute/run\`
+  - *Incorrect:* \`\${process.env.NEXT_PUBLIC_API_URL}api/execute/run\`
+
 ## Authentication Rules
 - The home page is public. 
 - The profile page requires authentication to view stats. Logging in registers the user to the Live Counter.
