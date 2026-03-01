@@ -84,6 +84,21 @@ Currently, we are building the **Landing Page** and **Authentication System**.
     - **Run Button:** Sends code to the backend to execute against visible public test cases via Judge0.
     - **Submit Button:** Sends code to the backend, prepends/appends hidden Driver Code, and evaluates against hidden test cases. Awards points based on successful evaluation.
 
+
+## Specific Features: Prediction Pool
+1.  **Visual State:**
+    - Must feature a "Glassmorphism" overlay (`backdrop-blur`) that disables interaction but keeps the underlying UI visible.
+    - Overlay must display a large Lock icon, "PREDICTION POOL IS CURRENTLY LOCKED", and a countdown timer.
+2.  **Pool Categories (The 3 Bets):**
+    - "Next Problem": Betting points on successfully solving the next attempted problem.
+    - "Daily Clear": Betting points on solving all 5 daily problems.
+    - "Ironman Streak": Betting points on solving at least one problem every day of the 7-day challenge.
+3.  **Real-Time Total:**
+    - Must feature a prominent, animated (spinning or pulsing) circular UI element displaying the "Total Pool Pot" (mocked to a high number like 24,500 pts).
+4.  **User Controls:**
+    - A bottom dashboard showing the user's current available points.
+    - An input field to enter the wager amount and a disabled "Place Bet" button.
+
 ## Authentication Rules
 - The home page is public. 
 - The profile page requires authentication to view stats. Logging in registers the user to the Live Counter.
