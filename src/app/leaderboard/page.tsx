@@ -1,6 +1,7 @@
 "use client";
 
-import { Trophy, Terminal, Clock, Zap, Shield, Crown, LucideIcon } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Trophy, Terminal, Clock, Zap, Shield, Crown, LucideIcon, Lock, Timer } from "lucide-react";
 import { motion } from "framer-motion";
 
 // --- Types ---
@@ -130,8 +131,61 @@ const LeaderboardCard = ({
 };
 
 export default function LeaderboardPage() {
+  const [countdown, setCountdown] = useState("");
+
+  useEffect(() => {
+    const targetDate = new Date("2026-03-30T00:00:00").getTime();
+
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+
+      if (distance < 0) {
+        setCountdown("EVENT LIVE");
+        return;
+      }
+
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <main className="min-h-screen bg-zinc-950 text-white pt-24 pb-12 px-6">
+    <main className="min-h-screen bg-zinc-950 text-white pt-24 pb-12 px-6 relative overflow-hidden">
+      {/* LOCKED OVERLAY - ULTRA TRANSPARENT */}
+      <div className="fixed inset-0 top-16 z-40 flex flex-col items-center justify-center bg-black/20 backdrop-blur-[1px]">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center p-10 rounded-3xl border border-white/20 bg-zinc-900/40 backdrop-blur-md shadow-2xl text-center max-w-sm mx-6"
+        >
+          <div className="bg-yellow-500/10 p-5 rounded-full mb-6 border border-yellow-500/30 shadow-[0_0_30px_rgba(255,199,44,0.1)]">
+            <Lock className="w-10 h-10 text-yellow-500" />
+          </div>
+          <h2 className="text-xl font-black uppercase italic tracking-tighter mb-2">
+            Intel <span className="text-yellow-500">Locked</span>
+          </h2>
+          <p className="text-white/60 font-mono text-[10px] uppercase tracking-widest mb-6">
+            Sector Surveillance Restricted
+          </p>
+          
+          <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-xl w-full">
+            <div className="flex items-center justify-center gap-3 text-yellow-500 font-black text-xl font-mono italic">
+              <Timer className="w-4 h-4" />
+              {countdown}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
       {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/5 blur-[120px] rounded-full" />
