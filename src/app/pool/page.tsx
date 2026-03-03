@@ -70,7 +70,7 @@ export default function PredictionPoolPage() {
     <div className="min-h-screen bg-[#111111] text-white selection:bg-[#FFC72C] selection:text-black relative overflow-hidden">
       
       {/* LOCKED OVERLAY - ULTRA TRANSPARENT */}
-      <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#111111]/20 backdrop-blur-[1px]">
+      <div className="fixed inset-0 top-16 z-40 flex flex-col items-center justify-center bg-[#111111]/20 backdrop-blur-[1px]">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
