@@ -110,3 +110,15 @@ Currently, we are building the **Landing Page** and **Authentication System**.
 ## Authentication Rules
 - The home page is public. 
 - The profile page requires authentication to view stats. Logging in registers the user to the Live Counter.
+
+## Event Schedule & Time Logic
+- **Single Source of Truth:** The FastAPI backend is the strict authority on the current time and active event stage. The Next.js frontend must NEVER use `new Date()` or client-side time to determine which problems to unlock or which UI elements to display.
+- **Timezone:** All time calculations on the backend must be strictly evaluated against Pacific Time (`America/Los_Angeles`).
+- **Stage Definitions:**
+  - `playground`: Active before March 30, 2026.
+  - `day_1` through `day_7`: Unlocks sequentially each day at 12:00 AM PT starting March 30.
+- **API Response:** The `/api/problems/daily` endpoint (and any related event endpoints) must explicitly return the `active_stage` in its JSON payload. The backend must refuse any requests for future stages.
+- **Frontend UI Behavior:** - The UI must dynamically react to the backend's `active_stage` payload.
+  - If the stage is `day_X`, the "Playground" section must be completely hidden.
+  - Future days must render with a locked state (e.g., padlock icon, disabled clicks).
+  - Past days remain unlocked and accessible.

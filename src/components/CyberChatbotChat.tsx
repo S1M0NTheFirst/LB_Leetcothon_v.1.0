@@ -9,7 +9,7 @@ interface Message {
   content: string;
 }
 
-export default function CyberSharkChat() {
+export default function CyberChatbotChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -109,9 +109,9 @@ export default function CyberSharkChat() {
               }}
             >
               <img
-                src="/image/shark.png"
-                alt="Cyber Shark"
-                className="h-20 w-20 object-contain drop-shadow-[0_0_15px_rgba(245,158,11,0.6)]"
+                src="/image/chatbot.png"
+                alt="Cyber Chatbot"
+                className="h-20 w-20 object-contain drop-shadow-[0_0_15px_rgba(245,158,11,0.6)] mix-blend-multiply"
               />
             </motion.div>
           </motion.div>
@@ -131,7 +131,7 @@ export default function CyberSharkChat() {
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
                 <span className="text-amber-500 text-xs font-black tracking-[0.2em] uppercase">
-                  CYBER_SHARK v1.0 // ONLINE
+                  CYBER_CHATBOT v1.0 // ONLINE
                 </span>
               </div>
               <button
@@ -150,7 +150,7 @@ export default function CyberSharkChat() {
             >
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-                  <img src="/image/shark.png" className="w-16 h-16 opacity-20 grayscale" alt="Shark Placeholder" />
+                  <img src="/image/chatbot.png" className="w-16 h-16 opacity-20 grayscale mix-blend-multiply" alt="Chatbot Placeholder" />
                   <div className="text-amber-500/30 text-[10px] tracking-[0.3em] uppercase">
                     LONG BEACH LEETCOTHON1.0
                   </div>
@@ -166,9 +166,9 @@ export default function CyberSharkChat() {
                 >
                   {m.role === "assistant" && (
                     <img 
-                      src="/image/shark.png" 
-                      className="w-10 h-10 rounded-full border border-amber-500/50 bg-black p-1 shadow-[0_0_10px_rgba(245,158,11,0.3)] shrink-0" 
-                      alt="Cyber Shark Avatar"
+                      src="/image/chatbot.png" 
+                      className="w-10 h-10 rounded-full border border-amber-500/50 bg-black p-1 shadow-[0_0_10px_rgba(245,158,11,0.3)] shrink-0 mix-blend-multiply" 
+                      alt="Cyber Chatbot Avatar"
                     />
                   )}
                   
@@ -187,8 +187,8 @@ export default function CyberSharkChat() {
               {isLoading && (
                 <div className="flex items-center gap-3">
                   <img 
-                    src="/image/shark.png" 
-                    className="w-10 h-10 rounded-full border border-amber-500/50 bg-black p-1 animate-pulse shrink-0" 
+                    src="/image/chatbot.png" 
+                    className="w-10 h-10 rounded-full border border-amber-500/50 bg-black p-1 animate-pulse shrink-0 mix-blend-multiply" 
                     alt="Loading"
                   />
                   <div className="bg-amber-900/10 p-3 rounded-full flex gap-1">

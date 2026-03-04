@@ -17,7 +17,7 @@ interface LeaderboardEntry {
 // --- Mock Data ---
 const TOP_EARNERS: LeaderboardEntry[] = [
   { id: "1", rank: 1, name: "null_pointer", value: 12500 },
-  { id: "2", rank: 2, name: "cyber_shark", value: 11200 },
+  { id: "2", rank: 2, name: "cyber_chatbot", value: 11200 },
   { id: "3", rank: 3, name: "bit_crusher", value: 10850 },
   { id: "4", rank: 4, name: "hex_wizard", value: 9400 },
   { id: "5", rank: 5, name: "stack_overflow", value: 8900 },
@@ -251,7 +251,7 @@ export default function LeaderboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { user: "null_pointer", action: "solved Hard problem", time: "2m ago" },
-              { user: "cyber_shark", action: "earned 500 credits", time: "5m ago" },
+              { user: "cyber_chatbot", action: "earned 500 credits", time: "5m ago" },
               { user: "logic_bomb", action: "started 14 day streak", time: "12m ago" },
               { user: "hex_wizard", action: "uploaded new exploit", time: "15m ago" },
             ].map((activity, i) => (

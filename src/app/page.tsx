@@ -5,7 +5,7 @@ import * as motion from "framer-motion/client";
 import Playbook from "@/components/Playbook";
 import Link from "next/link";
 import { Zap } from "lucide-react";
-import CyberSharkChat from "@/components/CyberSharkChat";
+import CyberChatbotChat from "@/components/CyberChatbotChat";
 
 export default function Home() {
   return (
@@ -158,7 +158,7 @@ export default function Home() {
           </p>
         </section>
       </div>
-      <CyberSharkChat />
+      <CyberChatbotChat />
     </main>
   );
 }
