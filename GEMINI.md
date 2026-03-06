@@ -122,3 +122,22 @@ Currently, we are building the **Landing Page** and **Authentication System**.
   - If the stage is `day_X`, the "Playground" section must be completely hidden.
   - Future days must render with a locked state (e.g., padlock icon, disabled clicks).
   - Past days remain unlocked and accessible.
+
+
+## Problem Curation & Seeding Rules
+- **Data Source:** All problems MUST be authentic and fetched using a reliable LeetCode npm library (e.g., `leetcode-query` or similar GraphQL API wrappers) to populate the database/JSON files. Do not hallucinate fake problems.
+- **Daily Topics:** Each of the 7 days must focus on a specific algorithmic pattern:
+  - Day 1: Arrays & Linked Lists
+  - Day 2: Trees (Binary Trees & BSTs)
+  - Day 3: Dynamic Programming (DP)
+  - Day 4: Strings & Hash Maps
+  - Day 5: Two Pointers & Sliding Window
+  - Day 6: Graphs (BFS/DFS)
+  - Day 7: Mixed / Mock Assessment
+- **Difficulty Distribution (5 problems per day per track):**
+  - **Beginner Track:** Problem 1 (Easy), Problem 2 (Easy), Problem 3 (Easy), Problem 4 (Easy), Problem 5 (Medium).
+  - **Experienced Track:** Problem 1 (Easy), Problem 2 (Easy), Problem 3 (Medium), Problem 4 (Medium), Problem 5 (Hard).
+- **Formatting & UI Parity:** - The fetched problem description payload must perfectly mimic the official LeetCode layout.
+  - Data must cleanly separate into standard sections: `Problem Statement`, `Examples`, and `Constraints`.
+  - Content must be formatted using HTML/Markdown tags that map perfectly to the frontend's Tailwind typography styling.
+- **Test Cases:** Every single problem MUST fetch and include exactly 3 distinct test cases (both inputs and expected outputs) to display to the user and for the execution engine to validate against.
