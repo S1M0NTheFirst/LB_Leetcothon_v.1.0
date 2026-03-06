@@ -11,6 +11,8 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from database import PROBLEMS_DB
 from execute import router as execute_router
+from connection_manager import manager
+from fastapi import WebSocket, WebSocketDisconnect
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -75,6 +77,18 @@ async def chat(request: ChatRequest):
         return {"reply": response.text}
     except Exception as e:
         return {"error": str(e)}
+
+@app.websocket("/ws/live-coders")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep the connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        await manager.disconnect(websocket)
+    except Exception:
+        await manager.disconnect(websocket)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8005)

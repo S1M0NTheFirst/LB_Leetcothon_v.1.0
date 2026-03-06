@@ -125,8 +125,28 @@ const EventRow = ({ day, date }: EventRowProps) => {
 };
 
 export default function ArenaPage() {
-  const [hackersCoding] = useState(12);
+  const [hackersCoding, setHackersCoding] = useState(1);
   const [level, setLevel] = useState<"beginner" | "experienced">("beginner");
+
+  // WebSocket for real-time coder count
+  useEffect(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    if (!baseUrl) return;
+    
+    const wsUrl = baseUrl.replace(/^http/, "ws") + "/ws/live-coders";
+    const socket = new WebSocket(wsUrl);
+
+    socket.onmessage = (event) => {
+      const count = parseInt(event.data);
+      if (!isNaN(count)) {
+        setHackersCoding(count);
+      }
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, []);
 
   // Load level from localStorage on mount
   useEffect(() => {
@@ -206,7 +226,7 @@ export default function ArenaPage() {
                 <div className="absolute inset-0 w-2 h-2 bg-green-500 rounded-full animate-ping opacity-75" />
               </div>
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-white/80">
-                <span className="text-green-400">{hackersCoding}</span> Leetcoder Coding
+                <span className="text-green-400">{hackersCoding}</span> {hackersCoding === 1 ? "Live Coder" : "Live Coders"}
               </span>
             </div>
           </div>
