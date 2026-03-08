@@ -7,10 +7,12 @@ import {
   Play, Send, Terminal as TerminalIcon, Code2, BookOpen, 
   AlertCircle, X, Loader2, Lock, Bookmark, Settings, 
   RotateCcw, Maximize2, CheckSquare, Trophy, Cpu, Zap,
-  AlertTriangle, ArrowLeft
+  AlertTriangle, ArrowLeft, CheckCircle2
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const LANGUAGES = [
   { id: "python", name: "Python", judge0Id: 71, editorLang: "python" },
@@ -29,12 +31,30 @@ const STARTER_CODE: Record<string, string> = {
 export default function ProblemSolvingPage() {
   const { id } = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  
   const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0]);
   const [code, setCode] = useState("");
   const [lastResult, setLastResult] = useState<any>(null);
   const [resultType, setResultType] = useState<'run' | 'submit' | null>(null);
   const [activeTab, setActiveTab] = useState<'testcase' | 'result'>('testcase');
   const [activeCase, setActiveCase] = useState(0);
+  const [showToast, setShowToast] = useState(false);
+  const [toastPoints, setToastPoints] = useState(0);
+
+  // Fetch User Profile
+  const { data: profile } = useQuery({
+    queryKey: ["userProfile"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/profile");
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!session?.user?.email,
+  });
+
+  const isSolved = profile?.solved_problems?.includes(id as string);
 
   // Fetch Problem Data
   const { data: problem, isLoading: isProblemLoading, error: fetchError } = useQuery({
@@ -115,6 +135,16 @@ export default function ProblemSolvingPage() {
       setLastResult(data);
       setResultType('submit');
       setActiveTab('result');
+      
+      if (data.points_awarded) {
+        setToastPoints(data.awarded_amount);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 5000);
+      }
+      
+      if (data.status?.description === "Accepted") {
+        queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+      }
     },
   });
 
@@ -128,10 +158,15 @@ export default function ProblemSolvingPage() {
   };
 
   const handleSubmit = () => {
+    if (!session?.user?.email) {
+      alert("Please sign in to submit your solution.");
+      return;
+    }
     submitCodeMutation.mutate({
       problem_id: id as string,
       code,
       language_id: selectedLanguage.judge0Id,
+      user_email: session.user.email,
     });
   };
 
@@ -165,12 +200,37 @@ export default function ProblemSolvingPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-64px)] bg-[#0a0a0a] overflow-hidden text-white flex flex-col">
+    <div className="h-[calc(100vh-64px)] bg-[#0a0a0a] overflow-hidden text-white flex flex-col relative">
+      <AnimatePresence>
+        {showToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="absolute top-20 right-8 z-[100] bg-[#111] border border-[#FFC72C] p-4 rounded-xl shadow-[0_0_30px_rgba(255,199,44,0.2)] flex items-center gap-4"
+          >
+            <div className="bg-[#FFC72C] p-2 rounded-lg">
+              <Trophy className="w-6 h-6 text-black" />
+            </div>
+            <div>
+              <p className="text-[10px] text-[#FFC72C] font-black uppercase tracking-widest">Points Awarded</p>
+              <p className="text-xl font-black italic">+{toastPoints} XP</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-[#111111]">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-black italic tracking-tighter uppercase">
+          <h1 className="text-xl font-black italic tracking-tighter uppercase flex items-center gap-3">
             Problem <span className="text-[#FFC72C]">{problem?.id || id}</span>
+            {isSolved && (
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-black uppercase tracking-tighter">
+                <CheckCircle2 className="w-3 h-3" />
+                Solved
+              </span>
+            )}
           </h1>
           <div className="h-4 w-px bg-white/10" />
           <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-widest border ${
@@ -389,6 +449,16 @@ export default function ProblemSolvingPage() {
                               <div className="text-[10px] text-green-400 font-mono">Beats {lastResult.memory_beats}%</div>
                             </div>
                           </div>
+
+                          {lastResult.points_awarded && (
+                            <div className="bg-[#FFC72C]/10 border border-[#FFC72C]/20 p-4 rounded-xl flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Trophy className="w-5 h-5 text-[#FFC72C]" />
+                                <span className="text-sm font-bold uppercase tracking-tight text-[#FFC72C]">First Solve Bonus</span>
+                              </div>
+                              <span className="text-lg font-black italic text-[#FFC72C]">+{lastResult.awarded_amount} XP</span>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="space-y-6 animate-in fade-in duration-300">

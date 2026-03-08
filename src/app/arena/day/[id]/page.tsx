@@ -6,12 +6,28 @@ import { ArrowLeft, Trophy, Loader2 } from "lucide-react";
 import { useStageProblems } from "@/hooks/useDailyProblems";
 import { ProblemCard, SkeletonCard } from "@/components/ProblemCard";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function DayArenaPage() {
   const params = useParams();
   const router = useRouter();
   const stageId = params.id as string;
   const [level, setLevel] = useState<"beginner" | "experienced">("beginner");
+  const { data: session } = useSession();
+
+  // Fetch User Profile
+  const { data: profile } = useQuery({
+    queryKey: ["userProfile"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/profile");
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!session?.user?.email,
+  });
+
+  const solvedProblems = profile?.solved_problems || [];
 
   // Load level from localStorage on mount
   useEffect(() => {
@@ -96,6 +112,7 @@ export default function DayArenaPage() {
                   difficulty={prob.difficulty}
                   points={prob.points}
                   isBonus={idx === 4}
+                  isSolved={solvedProblems.includes(prob.id)}
                 />
               ))
             ) : (

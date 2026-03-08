@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Terminal, Trophy, Play } from "lucide-react";
+import { Terminal, Trophy, Play, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { Difficulty } from "@/hooks/useDailyProblems";
 
@@ -11,21 +11,26 @@ interface ProblemCardProps {
   difficulty: Difficulty | "Legendary";
   points: number;
   isBonus?: boolean;
+  isSolved?: boolean;
 }
 
-export const ProblemCard = ({ id, title, difficulty, points, isBonus }: ProblemCardProps) => {
+export const ProblemCard = ({ id, title, difficulty, points, isBonus, isSolved }: ProblemCardProps) => {
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
       className={`relative group p-6 rounded-xl border ${
-        isBonus
+        isSolved 
+          ? "border-green-500/30 bg-green-500/5"
+          : isBonus
           ? "border-[#FFC72C] bg-[#FFC72C]/5 shadow-[0_0_20px_rgba(255,199,44,0.1)]"
           : "border-white/10 bg-white/5 hover:border-[#FFC72C]/50"
       } transition-all duration-300`}
     >
       <div className="flex justify-between items-start mb-4">
-        <div className={`p-2 rounded-lg ${isBonus ? "bg-[#FFC72C]/20" : "bg-white/5"}`}>
-          {isBonus ? (
+        <div className={`p-2 rounded-lg ${isSolved ? "bg-green-500/20" : isBonus ? "bg-[#FFC72C]/20" : "bg-white/5"}`}>
+          {isSolved ? (
+            <CheckCircle2 className="w-5 h-5 text-green-500" />
+          ) : isBonus ? (
             <Trophy className="w-5 h-5 text-[#FFC72C]" />
           ) : (
             <Terminal className="w-5 h-5 text-white/70" />
@@ -46,28 +51,36 @@ export const ProblemCard = ({ id, title, difficulty, points, isBonus }: ProblemC
         </span>
       </div>
 
-      <h3 className={`text-lg font-bold mb-1 truncate ${isBonus ? "text-[#FFC72C]" : "text-white"}`} title={title}>
+      <h3 className={`text-lg font-bold mb-1 truncate ${isSolved ? "text-green-500" : isBonus ? "text-[#FFC72C]" : "text-white"}`} title={title}>
         {title}
       </h3>
       <p className="text-white/40 text-xs font-mono mb-6 uppercase tracking-wider">
-        Worth <span className={isBonus ? "text-[#FFC72C] font-bold" : "text-white/80 font-bold"}>{points}</span> {points === 1 ? "Point" : "Points"}
+        Worth <span className={isSolved ? "text-green-500/80 font-bold" : isBonus ? "text-[#FFC72C] font-bold" : "text-white/80 font-bold"}>{points}</span> {points === 1 ? "Point" : "Points"}
       </p>
 
       <Link 
         href={`/arena/problem/${id}`}
         className={`w-full py-2 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-          isBonus
+          isSolved
+            ? "bg-green-500/20 text-green-500 hover:bg-green-500/30 border border-green-500/30"
+            : isBonus
             ? "bg-[#FFC72C] text-black hover:bg-[#FFC72C]/90 shadow-[0_0_15px_rgba(255,199,44,0.3)]"
             : "bg-white/10 text-white hover:bg-[#FFC72C] hover:text-black"
         }`}
       >
         <Play className="w-4 h-4" />
-        ENTER
+        {isSolved ? "REVIEW" : "ENTER"}
       </Link>
 
-      {isBonus && (
+      {isBonus && !isSolved && (
         <div className="absolute -top-2 -right-2 bg-[#FFC72C] text-black text-[10px] font-black px-2 py-0.5 rounded shadow-lg transform rotate-12">
           BONUS
+        </div>
+      )}
+      
+      {isSolved && (
+        <div className="absolute -top-2 -right-2 bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded shadow-lg transform -rotate-12">
+          COMPLETED
         </div>
       )}
     </motion.div>

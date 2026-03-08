@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import { useDailyProblems, Difficulty } from "@/hooks/useDailyProblems";
 import Link from "next/link";
 import { ProblemCard, SkeletonCard } from "@/components/ProblemCard";
+import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 
 interface EventRowProps {
   day: number;
@@ -88,6 +90,20 @@ const EventRow = ({ day, date, status }: EventRowProps) => {
 export default function ArenaPage() {
   const [hackersCoding, setHackersCoding] = useState(1);
   const [level, setLevel] = useState<"beginner" | "experienced">("beginner");
+  const { data: session } = useSession();
+
+  // Fetch User Profile
+  const { data: profile } = useQuery({
+    queryKey: ["userProfile"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/profile");
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!session?.user?.email,
+  });
+
+  const solvedProblems = profile?.solved_problems || [];
 
   // WebSocket for real-time coder count
   useEffect(() => {
@@ -231,6 +247,7 @@ export default function ArenaPage() {
                     difficulty={prob.difficulty}
                     points={prob.points}
                     isBonus={idx === 4}
+                    isSolved={solvedProblems.includes(prob.id)}
                   />
                 ))
               )}

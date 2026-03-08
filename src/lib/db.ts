@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, ScanCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION,
@@ -24,5 +24,20 @@ export async function getUserCount() {
   } catch (error) {
     console.error("Error fetching user count:", error);
     return 0;
+  }
+}
+
+export async function getUserByEmail(email: string) {
+  try {
+    const { Item } = await db.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: { email },
+      })
+    );
+    return Item;
+  } catch (error) {
+    console.error("Error fetching user by email:", error);
+    return null;
   }
 }
