@@ -9,7 +9,12 @@ export interface Problem {
   points: number;
 }
 
-const fetchProblems = async (level: "beginner" | "experienced"): Promise<Problem[]> => {
+export interface DailyProblemsResponse {
+  active_stage: string;
+  problems: Problem[];
+}
+
+const fetchProblems = async (level: "beginner" | "experienced"): Promise<DailyProblemsResponse> => {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/problems/daily?level=${level}`);
   if (!response.ok) {
     throw new Error("Failed to fetch daily problems");
