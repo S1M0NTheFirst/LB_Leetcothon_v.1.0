@@ -20,8 +20,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Load .env variables
-load_dotenv(".env.local")
-load_dotenv(".env")
+env_path = os.path.join(os.path.dirname(__file__), "..", ".env.local")
+load_dotenv(env_path)
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 api_key = os.getenv("GOOGLE_GENERATIVE_AI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 if api_key:
