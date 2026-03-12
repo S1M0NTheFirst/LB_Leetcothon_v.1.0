@@ -128,7 +128,9 @@ async def get_problem_by_id(problem_id: str):
             if level in PROBLEMS_DB[stage]:
                 for problem in PROBLEMS_DB[stage][level]:
                     if problem["id"] == problem_id:
-                        return problem
+                        # Include stage and topic in the response
+                        topic = DAY_TOPICS.get(stage, "The Arena")
+                        return {**problem, "stage": stage, "topic": topic}
                             
     raise HTTPException(status_code=404, detail="Problem not found")
 

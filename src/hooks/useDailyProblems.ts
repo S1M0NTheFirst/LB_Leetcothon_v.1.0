@@ -7,6 +7,11 @@ export interface Problem {
   title: string;
   difficulty: Difficulty;
   points: number;
+  description?: string;
+  starter_code?: Record<string, string>;
+  public_test_cases?: any[];
+  stage?: string;
+  topic?: string;
 }
 
 export interface DailyProblemsResponse {
@@ -49,5 +54,19 @@ export const useStageProblems = (stage: string, level: "beginner" | "experienced
     queryKey: ["stageProblems", stage, level],
     queryFn: () => fetchStageProblems(stage, level),
     enabled: !!stage,
+  });
+};
+
+export const useProblem = (id: string) => {
+  return useQuery({
+    queryKey: ["problem", id],
+    queryFn: async (): Promise<Problem> => {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/problems/${id}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch problem");
+      }
+      return response.json();
+    },
+    enabled: !!id,
   });
 };

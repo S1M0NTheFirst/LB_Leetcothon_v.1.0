@@ -223,15 +223,29 @@ export default function ProblemSolvingPage() {
       {/* Top Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-[#111111]">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-black italic tracking-tighter uppercase flex items-center gap-3">
-            Problem <span className="text-[#FFC72C]">{problem?.id || id}</span>
-            {isSolved && (
-              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-black uppercase tracking-tighter">
-                <CheckCircle2 className="w-3 h-3" />
-                Solved
-              </span>
+          <button 
+            onClick={() => router.push(`/arena/day/${problem?.stage || "playground"}`)}
+            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-[#FFC72C] transition-all border border-white/10"
+            title="Back to Day List"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-black italic tracking-tighter uppercase flex items-center gap-3">
+              Problem <span className="text-[#FFC72C]">{problem?.id || id}</span>
+              {isSolved && (
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-black uppercase tracking-tighter">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Solved
+                </span>
+              )}
+            </h1>
+            {problem?.topic && (
+              <p className="text-[9px] text-[#FFC72C] font-mono font-bold uppercase tracking-widest leading-none">
+                {problem.topic}
+              </p>
             )}
-          </h1>
+          </div>
           <div className="h-4 w-px bg-white/10" />
           <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-widest border ${
             problem?.difficulty === "Easy" ? "bg-green-500/10 text-green-400 border-green-500/20" :
