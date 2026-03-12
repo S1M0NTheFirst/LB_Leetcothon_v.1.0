@@ -7,7 +7,7 @@ from typing import Literal
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 import pytz
 from database import PROBLEMS_DB
@@ -25,8 +25,9 @@ load_dotenv(env_path)
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 api_key = os.getenv("GOOGLE_GENERATIVE_AI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+client = None
 if api_key:
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -71,12 +72,11 @@ def get_current_stage():
 
 # Helper to check if a stage is past or current
 def is_stage_accessible(stage: str):
+    # "playground" is always accessible
+    if stage == "playground":
+        return True
+        
     current_stage = get_current_stage()
-    
-    # "playground" is always accessible unless it's March 30 or later?
-    # Actually, the requirement says on Day 1, playground is locked/hidden.
-    # So on Day 1, only day_1 is "active", playground is "past"?
-    # Let's define order
     stages_order = ["playground", "day_1", "day_2", "day_3", "day_4", "day_5", "day_6", "day_7"]
     
     if stage not in stages_order:
@@ -158,11 +158,15 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
+    if not client:
+        return {"error": "Generative AI client not initialized. Check your API key."}
     try:
         event_context = get_event_context()
-        model = genai.GenerativeModel("gemini-2.0-flash")
         prompt = f"{event_context}\nUSER: {request.message}"
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
         return {"reply": response.text}
     except Exception as e:
         return {"error": str(e)}
