@@ -142,6 +142,7 @@ export default function ArenaPage() {
   const { data, isLoading, isFetching } = useDailyProblems(level);
   const problems = data?.problems;
   const activeStage = data?.active_stage || "playground";
+  const currentTopic = data?.topic || "Warm-Up Playground";
 
   const mainEvents = [
     { day: 1, date: "March 30, 2026", id: "day_1" },

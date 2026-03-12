@@ -93,44 +93,45 @@ def get_event_context():
         with open(os.path.join(os.path.dirname(__file__), "event_context.txt"), "r") as f:
             return f.read()
     except Exception:
-        return "SYSTEM: You are a helpful assistant."
+        from database import PROBLEMS_DB, DAY_TOPICS
+        from execute import router as execute_router
+        ...
+        @app.get("/api/problems/daily")
+        async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(...)):
+            stage = get_current_stage()
+            topic = DAY_TOPICS.get(stage, "The Arena")
 
-@app.get("/api/problems/daily")
-async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(...)):
-    stage = get_current_stage()
-    
-    # For now, if stage is not playground, we might not have problems yet.
-    # But we'll try to get them from PROBLEMS_DB.
-    # If PROBLEMS_DB is not restructured, we'll return playground problems for now
-    # to avoid breaking things, but we'll include the stage.
-    
-    # If PROBLEMS_DB is structured by stage:
-    if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
-        problems = PROBLEMS_DB[stage][level]
-    else:
-        # Fallback to current structure if not restructured yet
-        problems = PROBLEMS_DB.get(level, [])
-        
-    return {
-        "active_stage": stage,
-        "problems": problems
-    }
+            # If PROBLEMS_DB is structured by stage:
+            if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
+                problems = PROBLEMS_DB[stage][level]
+            else:
+                # Fallback to current structure if not restructured yet
+                problems = PROBLEMS_DB.get(level, [])
 
-@app.get("/api/problems/stage/{stage}")
-async def get_problems_by_stage(stage: str, level: Literal["beginner", "experienced"] = Query(...)):
-    if not is_stage_accessible(stage):
-        raise HTTPException(status_code=403, detail="This stage is not yet unlocked.")
-    
-    if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
-        problems = PROBLEMS_DB[stage][level]
-    else:
-        # Fallback
-        problems = PROBLEMS_DB.get(level, [])
-        
-    return {
-        "stage": stage,
-        "problems": problems
-    }
+            return {
+                "active_stage": stage,
+                "topic": topic,
+                "problems": problems
+            }
+
+        @app.get("/api/problems/stage/{stage}")
+        async def get_problems_by_stage(stage: str, level: Literal["beginner", "experienced"] = Query(...)):
+            if not is_stage_accessible(stage):
+                raise HTTPException(status_code=403, detail="This stage is not yet unlocked.")
+
+            topic = DAY_TOPICS.get(stage, "The Arena")
+
+            if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
+                problems = PROBLEMS_DB[stage][level]
+            else:
+                # Fallback
+                problems = PROBLEMS_DB.get(level, [])
+
+            return {
+                "stage": stage,
+                "topic": topic,
+                "problems": problems
+            }
 
 @app.get("/api/problems/{problem_id}")
 async def get_problem_by_id(problem_id: str):

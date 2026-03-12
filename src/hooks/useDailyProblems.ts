@@ -11,11 +11,13 @@ export interface Problem {
 
 export interface DailyProblemsResponse {
   active_stage: string;
+  topic: string;
   problems: Problem[];
 }
 
 export interface StageProblemsResponse {
   stage: string;
+  topic: string;
   problems: Problem[];
 }
 
