@@ -10,10 +10,10 @@ import { useQuery } from "@tanstack/react-query";
 
 interface EventRowProps {
   day: number;
-  date: string;
+  topic: string;
 }
 
-const EventRow = ({ day, date }: EventRowProps) => {
+const EventRow = ({ day, topic }: EventRowProps) => {
   return (
     <div className={`group relative flex flex-col md:flex-row items-center justify-between p-6 rounded-xl border transition-all duration-500 border-[#FFC72C]/30 bg-[#FFC72C]/5 shadow-[0_0_30px_rgba(255,199,44,0.05)]`}>
       <div className="flex items-center gap-6 mb-4 md:mb-0">
@@ -26,7 +26,7 @@ const EventRow = ({ day, date }: EventRowProps) => {
           </h4>
           <p className="text-white/20 text-xs font-mono uppercase tracking-tighter flex items-center gap-2">
             <span className="text-[#FFC72C] animate-pulse flex items-center gap-2">
-              <Activity className="w-3 h-3" /> LIVE NOW
+              <Activity className="w-3 h-3" /> LIVE NOW - {topic}
             </span>
           </p>
         </div>
@@ -48,6 +48,16 @@ const EventRow = ({ day, date }: EventRowProps) => {
       </div>
     </div>
   );
+};
+
+const DAY_TOPICS: Record<string, string> = {
+  "day_1": "Arrays & Hashing",
+  "day_2": "Two Pointers & Sliding Window",
+  "day_3": "Stack & Queue",
+  "day_4": "Binary Search & Math",
+  "day_5": "Dynamic Programming I",
+  "day_6": "Dynamic Programming II",
+  "day_7": "Final Boss: Advanced Mix"
 };
 
 export default function ArenaPage() {
@@ -107,13 +117,13 @@ export default function ArenaPage() {
   const currentTopic = data?.topic || "Warm-Up Playground";
 
   const mainEvents = [
-    { day: 1, date: "March 30, 2026", id: "day_1" },
-    { day: 2, date: "March 31, 2026", id: "day_2" },
-    { day: 3, date: "April 1, 2026", id: "day_3" },
-    { day: 4, date: "April 2, 2026", id: "day_4" },
-    { day: 5, date: "April 3, 2026", id: "day_5" },
-    { day: 6, date: "April 4, 2026", id: "day_6" },
-    { day: 7, date: "April 5, 2026", id: "day_7" },
+    { day: 1, id: "day_1" },
+    { day: 2, id: "day_2" },
+    { day: 3, id: "day_3" },
+    { day: 4, id: "day_4" },
+    { day: 5, id: "day_5" },
+    { day: 6, id: "day_6" },
+    { day: 7, id: "day_7" },
   ];
 
   return (
@@ -217,8 +227,8 @@ export default function ArenaPage() {
             {mainEvents.map((event) => (
               <EventRow 
                 key={event.day} 
-                day={event.day} 
-                date={event.date}
+                day={event.day}
+                topic={DAY_TOPICS[event.id] || ""}
               />
             ))}
           </div>

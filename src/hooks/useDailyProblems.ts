@@ -9,7 +9,7 @@ export interface Problem {
   points: number;
   description?: string;
   starter_code?: Record<string, string>;
-  public_test_cases?: any[];
+  public_test_cases?: { input: string; expected: string }[];
   stage?: string;
   topic?: string;
 }

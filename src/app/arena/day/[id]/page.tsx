@@ -49,7 +49,7 @@ export default function DayArenaPage() {
     return (
       <div className="min-h-screen bg-[#111111] text-white flex flex-col items-center justify-center p-6">
         <h1 className="text-2xl font-bold text-red-500 mb-4">ACCESS DENIED</h1>
-        <p className="text-white/60 mb-8">{(error as any)?.message || "This stage is not yet unlocked."}</p>
+        <p className="text-white/60 mb-8">{(error as Error)?.message || "This stage is not yet unlocked."}</p>
         <Link href="/arena" className="flex items-center gap-2 text-[#FFC72C] hover:underline">
           <ArrowLeft className="w-4 h-4" /> BACK TO ARENA
         </Link>
