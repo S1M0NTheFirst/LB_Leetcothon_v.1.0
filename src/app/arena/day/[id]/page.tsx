@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Trophy, Loader2 } from "lucide-react";
+import { useParams } from "next/navigation";
+import { ArrowLeft, Trophy } from "lucide-react";
 import { useStageProblems } from "@/hooks/useDailyProblems";
 import { ProblemCard, SkeletonCard } from "@/components/ProblemCard";
 import Link from "next/link";
@@ -11,7 +11,6 @@ import { useQuery } from "@tanstack/react-query";
 
 export default function DayArenaPage() {
   const params = useParams();
-  const router = useRouter();
   const stageId = params.id as string;
   const [level, setLevel] = useState<"beginner" | "experienced">("beginner");
   const { data: session } = useSession();
@@ -33,12 +32,13 @@ export default function DayArenaPage() {
   useEffect(() => {
     const savedLevel = localStorage.getItem("arena_level") as "beginner" | "experienced";
     if (savedLevel && (savedLevel === "beginner" || savedLevel === "experienced")) {
-      setLevel(savedLevel);
+      setTimeout(() => setLevel(savedLevel), 0);
     }
   }, []);
 
   const { data, isLoading, isError, error } = useStageProblems(stageId, level);
   const problems = data?.problems;
+  const topic = data?.topic || "";
 
   const handleLevelChange = (newLevel: "beginner" | "experienced") => {
     setLevel(newLevel);
@@ -69,6 +69,11 @@ export default function DayArenaPage() {
             <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic">
               {stageId.replace("_", " ")} <span className="text-[#FFC72C]">ARENA</span>
             </h1>
+            {topic && (
+              <p className="text-[#FFC72C] font-mono mt-2 uppercase tracking-widest text-sm font-bold">
+                {topic}
+              </p>
+            )}
           </div>
 
           {/* Level Toggle */}

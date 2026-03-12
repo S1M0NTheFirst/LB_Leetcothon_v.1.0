@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from google import genai
 from dotenv import load_dotenv
 import pytz
-from database import PROBLEMS_DB
+from database import PROBLEMS_DB, DAY_TOPICS
 from execute import router as execute_router
 from connection_manager import manager
 from fastapi import WebSocket, WebSocketDisconnect
@@ -38,7 +38,7 @@ app.include_router(execute_router)
 # Add CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://lb-leetcothon-v-1-0.vercel.app"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "https://lb-leetcothon-v-1-0.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,20 +72,8 @@ def get_current_stage():
 
 # Helper to check if a stage is past or current
 def is_stage_accessible(stage: str):
-    # "playground" is always accessible
-    if stage == "playground":
-        return True
-        
-    current_stage = get_current_stage()
-    stages_order = ["playground", "day_1", "day_2", "day_3", "day_4", "day_5", "day_6", "day_7"]
-    
-    if stage not in stages_order:
-        return False
-        
-    current_idx = stages_order.index(current_stage)
-    stage_idx = stages_order.index(stage)
-    
-    return stage_idx <= current_idx
+    # FOR TESTING: All stages are accessible
+    return True
 
 # Function to read event context from file
 def get_event_context():
@@ -93,64 +81,54 @@ def get_event_context():
         with open(os.path.join(os.path.dirname(__file__), "event_context.txt"), "r") as f:
             return f.read()
     except Exception:
-        from database import PROBLEMS_DB, DAY_TOPICS
-        from execute import router as execute_router
-        ...
-        @app.get("/api/problems/daily")
-        async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(...)):
-            stage = get_current_stage()
-            topic = DAY_TOPICS.get(stage, "The Arena")
+        return "SYSTEM: You are a helpful assistant for the LB Leetcothon event."
 
-            # If PROBLEMS_DB is structured by stage:
-            if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
-                problems = PROBLEMS_DB[stage][level]
-            else:
-                # Fallback to current structure if not restructured yet
-                problems = PROBLEMS_DB.get(level, [])
+@app.get("/api/problems/daily")
+async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(...)):
+    stage = get_current_stage()
+    topic = DAY_TOPICS.get(stage, "The Arena")
+    
+    # If PROBLEMS_DB is structured by stage:
+    if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
+        problems = PROBLEMS_DB[stage][level]
+    else:
+        # Fallback to current structure if not restructured yet
+        problems = PROBLEMS_DB.get(level, [])
+        
+    return {
+        "active_stage": stage,
+        "topic": topic,
+        "problems": problems
+    }
 
-            return {
-                "active_stage": stage,
-                "topic": topic,
-                "problems": problems
-            }
-
-        @app.get("/api/problems/stage/{stage}")
-        async def get_problems_by_stage(stage: str, level: Literal["beginner", "experienced"] = Query(...)):
-            if not is_stage_accessible(stage):
-                raise HTTPException(status_code=403, detail="This stage is not yet unlocked.")
-
-            topic = DAY_TOPICS.get(stage, "The Arena")
-
-            if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
-                problems = PROBLEMS_DB[stage][level]
-            else:
-                # Fallback
-                problems = PROBLEMS_DB.get(level, [])
-
-            return {
-                "stage": stage,
-                "topic": topic,
-                "problems": problems
-            }
+@app.get("/api/problems/stage/{stage}")
+async def get_problems_by_stage(stage: str, level: Literal["beginner", "experienced"] = Query(...)):
+    if not is_stage_accessible(stage):
+        raise HTTPException(status_code=403, detail="This stage is not yet unlocked.")
+    
+    topic = DAY_TOPICS.get(stage, "The Arena")
+    
+    if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
+        problems = PROBLEMS_DB[stage][level]
+    else:
+        # Fallback
+        problems = PROBLEMS_DB.get(level, [])
+        
+    return {
+        "stage": stage,
+        "topic": topic,
+        "problems": problems
+    }
 
 @app.get("/api/problems/{problem_id}")
 async def get_problem_by_id(problem_id: str):
-    # This might need update if PROBLEMS_DB is restructured
-    # For now search everywhere
-    if "beginner" in PROBLEMS_DB and "experienced" in PROBLEMS_DB:
-        # Old structure
+    # New structure
+    for stage in PROBLEMS_DB:
         for level in ["beginner", "experienced"]:
-            for problem in PROBLEMS_DB[level]:
-                if problem["id"] == problem_id:
-                    return problem
-    else:
-        # New structure
-        for stage in PROBLEMS_DB:
-            for level in ["beginner", "experienced"]:
-                if level in PROBLEMS_DB[stage]:
-                    for problem in PROBLEMS_DB[stage][level]:
-                        if problem["id"] == problem_id:
-                            return problem
+            if level in PROBLEMS_DB[stage]:
+                for problem in PROBLEMS_DB[stage][level]:
+                    if problem["id"] == problem_id:
+                        return problem
                             
     raise HTTPException(status_code=404, detail="Problem not found")
 
