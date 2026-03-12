@@ -44,36 +44,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+PT_TZ = pytz.timezone("America/Los_Angeles")
+EVENT_START_DATE = datetime(2026, 3, 30, 0, 0, 0, tzinfo=PT_TZ)
+EVENT_END_DATE = datetime(2026, 4, 5, 20, 0, 0, tzinfo=PT_TZ)
+
 # Helper function to get current event stage based on Pacific Time
 def get_current_stage():
-    pt_tz = pytz.timezone("America/Los_Angeles")
-    current_time = datetime.now(pt_tz)
-    current_date = current_time.date()
+    current_time = datetime.now(PT_TZ)
     
-    # Event starts March 30, 2026
-    start_date = datetime(2026, 3, 30).date()
-    
-    if current_date < start_date:
+    if current_time < EVENT_START_DATE:
         return "playground"
     
+    if current_time > EVENT_END_DATE:
+        return "event_over"
+        
     # Map dates to days
     date_to_stage = {
-        datetime(2026, 3, 30).date(): "day_1",
-        datetime(2026, 3, 31).date(): "day_2",
-        datetime(2026, 4, 1).date(): "day_3",
-        datetime(2026, 4, 2).date(): "day_4",
-        datetime(2026, 4, 3).date(): "day_5",
-        datetime(2026, 4, 4).date(): "day_6",
-        datetime(2026, 4, 5).date(): "day_7",
+        (EVENT_START_DATE + timedelta(days=i)).date(): f"day_{i+1}"
+        for i in range(7)
     }
     
-    stage = date_to_stage.get(current_date, "day_7" if current_date > datetime(2026, 4, 5).date() else "playground")
+    stage = date_to_stage.get(current_time.date(), "playground") # Fallback to playground just in case
     return stage
 
 # Helper to check if a stage is past or current
 def is_stage_accessible(stage: str):
-    # FOR TESTING: All stages are accessible
-    return True
+    if stage == "playground":
+        return datetime.now(PT_TZ) < EVENT_START_DATE
+        
+    current_stage = get_current_stage()
+    if current_stage == "event_over":
+        return True # All past stages are accessible
+
+    stages_order = ["day_1", "day_2", "day_3", "day_4", "day_5", "day_6", "day_7"]
+    if stage not in stages_order:
+        return False
+        
+    current_idx = stages_order.index(current_stage)
+    stage_idx = stages_order.index(stage)
+    
+    return stage_idx <= current_idx
 
 # Function to read event context from file
 def get_event_context():
@@ -88,12 +98,10 @@ async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(.
     stage = get_current_stage()
     topic = DAY_TOPICS.get(stage, "The Arena")
     
-    # If PROBLEMS_DB is structured by stage:
     if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
         problems = PROBLEMS_DB[stage][level]
     else:
-        # Fallback to current structure if not restructured yet
-        problems = PROBLEMS_DB.get(level, [])
+        problems = []
         
     return {
         "active_stage": stage,
@@ -111,8 +119,7 @@ async def get_problems_by_stage(stage: str, level: Literal["beginner", "experien
     if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
         problems = PROBLEMS_DB[stage][level]
     else:
-        # Fallback
-        problems = PROBLEMS_DB.get(level, [])
+        problems = []
         
     return {
         "stage": stage,
@@ -122,13 +129,11 @@ async def get_problems_by_stage(stage: str, level: Literal["beginner", "experien
 
 @app.get("/api/problems/{problem_id}")
 async def get_problem_by_id(problem_id: str):
-    # New structure
     for stage in PROBLEMS_DB:
         for level in ["beginner", "experienced"]:
             if level in PROBLEMS_DB[stage]:
                 for problem in PROBLEMS_DB[stage][level]:
                     if problem["id"] == problem_id:
-                        # Include stage and topic in the response
                         topic = DAY_TOPICS.get(stage, "The Arena")
                         return {**problem, "stage": stage, "topic": topic}
                             
@@ -144,10 +149,7 @@ async def chat(request: ChatRequest):
     try:
         event_context = get_event_context()
         prompt = f"{event_context}\nUSER: {request.message}"
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt
-        )
+        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
         return {"reply": response.text}
     except Exception as e:
         return {"error": str(e)}
@@ -157,7 +159,6 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            # Keep the connection alive
             await websocket.receive_text()
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
