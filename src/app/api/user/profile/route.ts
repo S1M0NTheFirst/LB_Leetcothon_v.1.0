@@ -19,7 +19,8 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      score: user.score || 0,
+      ...user,
+      points: user.points || 0,
       solved_problems: user.solved_problems || [],
     });
   } catch (error) {

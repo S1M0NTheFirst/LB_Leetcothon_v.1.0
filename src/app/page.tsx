@@ -154,7 +154,7 @@ export default function Home() {
           </Link>
 
           <p className="text-amber-500/80 text-sm mt-4 font-mono animate-pulse">
-            Confirm your registration and receive 5 INITIAL BOOT POINTS.
+            Confirm your registration and receive 5 INITIAL POINTS.
           </p>
         </section>
       </div>

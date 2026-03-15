@@ -214,7 +214,7 @@ export default function ProblemSolvingPage() {
             </div>
             <div>
               <p className="text-[10px] text-[#FFC72C] font-black uppercase tracking-widest">Points Awarded</p>
-              <p className="text-xl font-black italic">+{toastPoints} XP</p>
+              <p className="text-xl font-black italic">+{toastPoints} Points</p>
             </div>
           </motion.div>
         )}

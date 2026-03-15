@@ -2,7 +2,7 @@ import os
 import uvicorn
 import logging
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +11,7 @@ from google import genai
 from dotenv import load_dotenv
 import pytz
 from database import PROBLEMS_DB, DAY_TOPICS
-from execute import router as execute_router
+from execute import router as execute_router, table as user_table
 from connection_manager import manager
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -138,6 +138,39 @@ async def get_problem_by_id(problem_id: str):
                         return {**problem, "stage": stage, "topic": topic}
                             
     raise HTTPException(status_code=404, detail="Problem not found")
+
+@app.get("/api/leaderboard")
+async def get_leaderboard():
+    try:
+        response = user_table.scan()
+        items = response.get("Items", [])
+        
+        # Filter for enrolled users
+        enrolled_users = [u for u in items if u.get("isEnrolled", False)]
+        
+        # Sort by points (primary) and solved_problems count (secondary)
+        sorted_users = sorted(
+            enrolled_users, 
+            key=lambda u: (int(u.get("points", 0)), len(u.get("solved_problems", []))), 
+            reverse=True
+        )
+        
+        # Format for frontend
+        leaderboard = []
+        for i, u in enumerate(sorted_users[:50]): # Top 50
+            leaderboard.append({
+                "id": u.get("email"),
+                "rank": i + 1,
+                "name": u.get("name") or u.get("email").split("@")[0],
+                "points": int(u.get("points", 0)),
+                "solved_count": len(u.get("solved_problems", [])),
+                "experienceLevel": u.get("experienceLevel")
+            })
+            
+        return leaderboard
+    except Exception as e:
+        logger.error(f"Error fetching leaderboard: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch leaderboard")
 
 class ChatRequest(BaseModel):
     message: str

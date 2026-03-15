@@ -57,46 +57,41 @@ def get_problem_by_id(problem_id: str):
                         return problem, stage
     return None, None
 
-def get_difficulty_points(difficulty: str) -> int:
-    points_map = {
-        "Easy": 10,
-        "Medium": 20,
-        "Hard": 30
-    }
-    return points_map.get(difficulty, 10)
-
-async def award_points(user_email: str, problem_id: str, difficulty: str, current_stage: str):
-    if current_stage == "playground":
-        return 0, False
-    
+async def award_points(user_email: str, problem_id: str, current_stage: str):
     try:
-        # Get current user data
+        # 1. Find the problem to get its specific point value
+        problem, _ = get_problem_by_id(problem_id)
+        if not problem:
+            logger.error(f"Problem {problem_id} not found during point awarding.")
+            return 0, False
+            
+        points_to_award = problem.get("points", 1) # Default to 1 if not specified
+        
+        # 2. Get current user data
         response = table.get_item(Key={"email": user_email})
         user = response.get("Item")
         
         if not user:
-            # Should not happen if they are logged in, but let's be safe
             return 0, False
             
         solved_problems = user.get("solved_problems", [])
         if problem_id in solved_problems:
-            return user.get("score", 0), False
+            return int(user.get("points", 0)), False
             
-        points_to_award = get_difficulty_points(difficulty)
-        new_score = int(user.get("score", 0)) + points_to_award
+        new_points = int(user.get("points", 0)) + points_to_award
         
-        # Update user in DynamoDB
+        # 3. Update user in DynamoDB
         table.update_item(
             Key={"email": user_email},
-            UpdateExpression="SET score = :s, solved_problems = list_append(if_not_exists(solved_problems, :empty_list), :p)",
+            UpdateExpression="SET points = :p, solved_problems = list_append(if_not_exists(solved_problems, :empty_list), :pid)",
             ExpressionAttributeValues={
-                ":s": new_score,
-                ":p": [problem_id],
+                ":p": new_points,
+                ":pid": [problem_id],
                 ":empty_list": []
             }
         )
         
-        return new_score, True
+        return new_points, True
     except Exception as e:
         logger.error(f"Error awarding points: {e}")
         return 0, False
@@ -206,16 +201,19 @@ async def submit_code(request: SubmitRequest):
             
         # Point Awarding Logic
         points_awarded = False
-        new_score = 0
+        new_points = 0
         
         if result.get("status", {}).get("description") == "Accepted":
-            difficulty = result.get("difficulty", "Easy")
             stage = result.get("stage", "playground")
-            new_score, points_awarded = await award_points(request.user_email, request.problem_id, difficulty, stage)
+            new_points, points_awarded = await award_points(request.user_email, request.problem_id, stage)
             
+        # Get problem points for response
+        problem, _ = get_problem_by_id(request.problem_id)
+        awarded_amount = problem.get("points", 1) if points_awarded else 0
+
         result["points_awarded"] = points_awarded
-        result["new_score"] = new_score
-        result["awarded_amount"] = get_difficulty_points(result.get("difficulty", "Easy")) if points_awarded else 0
+        result["new_points"] = new_points
+        result["awarded_amount"] = awarded_amount
         
         return result
     except Exception as e:
