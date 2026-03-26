@@ -2,19 +2,20 @@ import os
 import uvicorn
 import logging
 import random
-from datetime import datetime
+import pytz
+from datetime import datetime, timedelta
 from typing import Literal
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 from dotenv import load_dotenv
-import pytz
 from database import PROBLEMS_DB, DAY_TOPICS
 from execute import router as execute_router
 from wagers import router as wagers_router
 from connection_manager import manager
 from fastapi import WebSocket, WebSocketDisconnect
+import boto3
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -50,41 +51,40 @@ PT_TZ = pytz.timezone("America/Los_Angeles")
 EVENT_START_DATE = datetime(2026, 3, 30, 0, 0, 0, tzinfo=PT_TZ)
 EVENT_END_DATE = datetime(2026, 4, 5, 20, 0, 0, tzinfo=PT_TZ)
 
+# DynamoDB Setup
+dynamodb = boto3.resource(
+    "dynamodb",
+    region_name=os.getenv("AWS_REGION", "us-east-1"),
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
+)
+
 # Helper function to get current event stage based on Pacific Time
 def get_current_stage():
     current_time = datetime.now(PT_TZ)
-    
     if current_time < EVENT_START_DATE:
         return "playground"
-    
     if current_time > EVENT_END_DATE:
         return "event_over"
-        
-    # Map dates to days
     date_to_stage = {
         (EVENT_START_DATE + timedelta(days=i)).date(): f"day_{i+1}"
         for i in range(7)
     }
-    
-    stage = date_to_stage.get(current_time.date(), "playground") # Fallback to playground just in case
+    stage = date_to_stage.get(current_time.date(), "playground")
     return stage
 
 # Helper to check if a stage is past or current
 def is_stage_accessible(stage: str):
     if stage == "playground":
-        return datetime.now(PT_TZ) < EVENT_START_DATE
-        
+        return True
     current_stage = get_current_stage()
     if current_stage == "event_over":
-        return True # All past stages are accessible
-
+        return True
     stages_order = ["day_1", "day_2", "day_3", "day_4", "day_5", "day_6", "day_7"]
     if stage not in stages_order:
         return False
-        
     current_idx = stages_order.index(current_stage)
     stage_idx = stages_order.index(stage)
-    
     return stage_idx <= current_idx
 
 # Function to read event context from file
@@ -94,16 +94,12 @@ def get_event_context():
             return f.read()
     except Exception:
         return "SYSTEM: You are a helpful assistant for the LB Leetcothon event."
+
 @app.get("/api/leaderboard")
 async def get_leaderboard():
     try:
-        from boto3.dynamodb.conditions import Attr
-        # Scan all users (assuming limited number for this event)
-        # In production, use a GSI on score
         response = dynamodb.Table(os.getenv("DYNAMODB_TABLE_NAME", "Users")).scan()
         users = response.get("Items", [])
-
-        # Format for frontend
         leaderboard = []
         for u in users:
             leaderboard.append({
@@ -115,25 +111,20 @@ async def get_leaderboard():
                 "streak_map": u.get("daily_streak_map", {}),
                 "is_ironman": u.get("ironman_bonus_awarded", False)
             })
-
-        # Sort by score descending
         leaderboard.sort(key=lambda x: x["score"], reverse=True)
-
         return leaderboard
     except Exception as e:
         logger.error(f"Leaderboard Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/problems/daily")
-async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(...)):
+async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(default=...)):
     stage = get_current_stage()
     topic = DAY_TOPICS.get(stage, "The Arena")
-    
     if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
         problems = PROBLEMS_DB[stage][level]
     else:
         problems = []
-        
     return {
         "active_stage": stage,
         "topic": topic,
@@ -141,17 +132,14 @@ async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(.
     }
 
 @app.get("/api/problems/stage/{stage}")
-async def get_problems_by_stage(stage: str, level: Literal["beginner", "experienced"] = Query(...)):
+async def get_problems_by_stage(stage: str, level: Literal["beginner", "experienced"] = Query(default=...)):
     if not is_stage_accessible(stage):
         raise HTTPException(status_code=403, detail="This stage is not yet unlocked.")
-    
     topic = DAY_TOPICS.get(stage, "The Arena")
-    
     if stage in PROBLEMS_DB and level in PROBLEMS_DB[stage]:
         problems = PROBLEMS_DB[stage][level]
     else:
         problems = []
-        
     return {
         "stage": stage,
         "topic": topic,
@@ -167,7 +155,6 @@ async def get_problem_by_id(problem_id: str):
                     if problem["id"] == problem_id:
                         topic = DAY_TOPICS.get(stage, "The Arena")
                         return {**problem, "stage": stage, "topic": topic}
-                            
     raise HTTPException(status_code=404, detail="Problem not found")
 
 class ChatRequest(BaseModel):

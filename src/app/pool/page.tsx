@@ -14,7 +14,9 @@ import {
   Info,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,10 +37,10 @@ export default function PredictionPoolPage() {
       return res.json();
     },
     enabled: !!session?.user?.email,
-    refetchInterval: 5000, // Refresh every 5s for "Live" feel
+    refetchInterval: 5000,
   });
 
-  // Fetch User Profile for points
+  // Fetch User Profile
   const { data: profile } = useQuery({
     queryKey: ["userProfile"],
     queryFn: async () => {
@@ -110,10 +112,15 @@ export default function PredictionPoolPage() {
   const calculatePotentialPayout = () => {
     if (!selectedPool || !stats) return 0;
     const pool = selectedPool === "daily_all_clear" ? stats.daily : stats.ironman;
-    // Simple math: (Current Pot + Your Bet) / (Current Participants + 1)
-    // This is just a preview; actual payout depends on final pool size and winners.
-    return Math.floor((pool.total_pot + betAmount) / (pool.participants + 1) * 0.95);
+    if (!pool) return 0;
+    
+    const currentPot = pool.total_pot || 0;
+    const currentParticipants = pool.participants || 0;
+    
+    return Math.floor((currentPot + betAmount) / (currentParticipants + 1) * 0.95);
   };
+
+  const totalCommunityPot = (stats?.daily?.total_pot || 0) + (stats?.ironman?.total_pot || 0);
 
   return (
     <div className="min-h-screen bg-[#111111] text-white selection:bg-[#FFC72C] selection:text-black relative overflow-hidden">
@@ -130,7 +137,7 @@ export default function PredictionPoolPage() {
             <div className="text-center z-10">
               <p className="text-[10px] font-mono text-white/40 uppercase tracking-[0.3em] mb-1">Total Community Pot</p>
               <h3 className="text-5xl font-black text-white italic tracking-tighter">
-                {isStatsLoading ? "---" : (stats?.daily?.total_pot + stats?.ironman?.total_pot).toLocaleString()}
+                {isStatsLoading ? "---" : totalCommunityPot.toLocaleString()}
               </h3>
               <p className="text-[#FFC72C] font-black text-sm uppercase italic">Points at Stake</p>
             </div>
@@ -142,12 +149,15 @@ export default function PredictionPoolPage() {
           {categories.map((cat) => (
             <motion.div 
               key={cat.id}
-              onClick={() => !cat.isJoined && setSelectedPool(cat.id as any)}
+              onClick={() => {
+                if (cat.isJoined) return;
+                setSelectedPool(selectedPool === cat.id ? null : cat.id as any);
+              }}
               className={`group p-8 rounded-3xl border transition-all cursor-pointer relative overflow-hidden ${
                 selectedPool === cat.id 
                   ? "bg-[#FFC72C]/10 border-[#FFC72C]/50 shadow-[0_0_30px_rgba(255,199,44,0.1)]" 
                   : cat.isJoined
-                    ? "bg-green-500/5 border-green-500/20 opacity-80"
+                    ? "bg-green-500/5 border-green-500/20 opacity-80 cursor-default"
                     : "bg-white/[0.03] border-white/5 hover:bg-white/[0.05] hover:border-white/10"
               }`}
             >
@@ -157,7 +167,7 @@ export default function PredictionPoolPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Live Pot</p>
-                  <p className="text-2xl font-black text-[#FFC72C] italic">{cat.stats?.total_pot?.toLocaleString()}</p>
+                  <p className="text-2xl font-black text-[#FFC72C] italic">{(cat.stats?.total_pot || 0).toLocaleString()}</p>
                 </div>
               </div>
               
@@ -170,7 +180,7 @@ export default function PredictionPoolPage() {
                 <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-white/20" />
                     <span className="text-[10px] font-mono text-white/30 uppercase tracking-widest">
-                        {cat.stats?.participants} Hackers Joined
+                        {(cat.stats?.participants || 0)} Hackers Joined
                     </span>
                 </div>
                 {cat.isJoined ? (
@@ -224,7 +234,7 @@ export default function PredictionPoolPage() {
                                             <Target className="w-4 h-4 text-[#FFC72C]" />
                                         </div>
                                         <div>
-                                            <p className="text-xs font-bold text-white uppercase">{wager.prediction_type.replace(/_/g, ' ')}</p>
+                                            <p className="text-xs font-bold text-white uppercase">{wager.prediction_type?.replace(/_/g, ' ')}</p>
                                             <p className="text-[10px] text-white/30 font-mono">{wager.pool_id}</p>
                                         </div>
                                     </div>
@@ -291,19 +301,27 @@ export default function PredictionPoolPage() {
                     <span>Wager Amount</span>
                     <span>Potential Payout: ~{calculatePotentialPayout()} pts</span>
                  </div>
-                 <input 
-                    type="range"
-                    min="10"
-                    max={Math.min(profile?.score || 0, 500)}
-                    step="10"
-                    value={betAmount}
-                    onChange={(e) => setBetAmount(parseInt(e.target.value))}
-                    className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#FFC72C] mb-2"
-                 />
-                 <div className="flex justify-between font-mono text-[10px] text-white/20">
-                    <span>10 PTS</span>
-                    <span className="text-[#FFC72C] font-black text-sm">{betAmount} PTS</span>
-                    <span>{Math.min(profile?.score || 0, 500)} PTS</span>
+                 <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                        <input 
+                            type="number"
+                            min="1"
+                            value={betAmount}
+                            onChange={(e) => setBetAmount(Math.max(1, parseInt(e.target.value) || 0))}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#FFC72C]/50 transition-colors"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 uppercase italic">pts</span>
+                    </div>
+                    <button 
+                        onClick={() => setBetAmount(profile?.score || 0)}
+                        className="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95"
+                    >
+                        MAX
+                    </button>
+                 </div>
+                 <div className="flex justify-between mt-2 font-mono text-[10px] text-white/20">
+                    <span>MIN: 1 PTS</span>
+                    <span className="text-[#FFC72C] font-black uppercase italic">Current Bet: {betAmount} PTS</span>
                  </div>
               </div>
 
