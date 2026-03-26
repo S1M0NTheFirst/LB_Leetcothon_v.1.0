@@ -94,8 +94,39 @@ def get_event_context():
             return f.read()
     except Exception:
         return "SYSTEM: You are a helpful assistant for the LB Leetcothon event."
+@app.get("/api/leaderboard")
+async def get_leaderboard():
+    try:
+        from boto3.dynamodb.conditions import Attr
+        # Scan all users (assuming limited number for this event)
+        # In production, use a GSI on score
+        response = dynamodb.Table(os.getenv("DYNAMODB_TABLE_NAME", "Users")).scan()
+        users = response.get("Items", [])
+
+        # Format for frontend
+        leaderboard = []
+        for u in users:
+            leaderboard.append({
+                "email": u.get("email"),
+                "name": u.get("name", "Anonymous"),
+                "image": u.get("image"),
+                "score": int(u.get("score", 0)),
+                "solved_count": len(u.get("solved_problems", [])),
+                "streak_map": u.get("daily_streak_map", {}),
+                "is_ironman": u.get("ironman_bonus_awarded", False)
+            })
+
+        # Sort by score descending
+        leaderboard.sort(key=lambda x: x["score"], reverse=True)
+
+        return leaderboard
+    except Exception as e:
+        logger.error(f"Leaderboard Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/problems/daily")
+...
+
 async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(...)):
     stage = get_current_stage()
     topic = DAY_TOPICS.get(stage, "The Arena")

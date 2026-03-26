@@ -3,6 +3,8 @@ import httpx
 import logging
 import random
 import boto3
+import pytz
+from datetime import datetime
 from typing import List, Optional, Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -11,6 +13,8 @@ from local_executor import run_local_cpp, run_local_c, run_local_java
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+PT_TZ = pytz.timezone("America/Los_Angeles")
 
 # DynamoDB Setup
 TABLE_NAME = os.getenv("DYNAMODB_TABLE_NAME", "Users")
@@ -35,75 +39,6 @@ import heapq
 import bisect
 
 """
-
-def get_problem_by_id(problem_id: str):
-    # New structure: PROBLEMS_DB[stage][level] = [problems]
-    for stage in PROBLEMS_DB:
-        for level in ["beginner", "experienced"]:
-            if level in PROBLEMS_DB[stage]:
-                for problem in PROBLEMS_DB[stage][level]:
-                    if problem["id"] == problem_id:
-                        return problem, stage
-    return None, None
-
-def get_difficulty_points(difficulty: str) -> int:
-    points_map = {
-        "Easy": 10,
-        "Medium": 20,
-        "Hard": 30
-    }
-    return points_map.get(difficulty, 10)
-
-async def award_points(user_email: str, problem_id: str, difficulty: str, current_stage: str):
-    if current_stage == "playground":
-        return 0, False
-    
-    try:
-        # Get current user data
-        response = table.get_item(Key={"email": user_email})
-        user = response.get("Item")
-        
-        if not user:
-            return 0, False
-            
-        solved_problems = user.get("solved_problems", [])
-        if problem_id in solved_problems:
-            return user.get("score", 0), False
-            
-        points_to_award = get_difficulty_points(difficulty)
-        new_score = int(user.get("score", 0)) + points_to_award
-        
-        # Add to solved_problems
-        solved_problems.append(problem_id)
-        
-        # Check if they just cleared the whole stage (5 problems)
-        stage_problems = []
-        for level in ["beginner", "experienced"]:
-            if current_stage in PROBLEMS_DB and level in PROBLEMS_DB[current_stage]:
-                stage_problems.extend([p["id"] for p in PROBLEMS_DB[current_stage][level]])
-        
-        stage_problems = list(set(stage_problems))
-        stage_solved_count = sum(1 for p in solved_problems if any(p == sp for sp in stage_problems))
-        
-        daily_clears = user.get("daily_clears", [])
-        if stage_solved_count >= 5 and current_stage not in daily_clears:
-            daily_clears.append(current_stage)
-
-        # Update user in DynamoDB
-        table.update_item(
-            Key={"email": user_email},
-            UpdateExpression="SET score = :s, solved_problems = :p, daily_clears = :dc",
-            ExpressionAttributeValues={
-                ":s": new_score,
-                ":p": solved_problems,
-                ":dc": daily_clears
-            }
-        )
-        
-        return new_score, True
-    except Exception as e:
-        logger.error(f"Error awarding points: {e}")
-        return 0, False
 
 # Common headers for languages
 CPP_HEADERS = """
@@ -138,7 +73,124 @@ import java.io.*;
 import java.util.stream.*;
 """
 
-# ... (rest of the file until execute_with_evaluation)
+class RunRequest(BaseModel):
+    code: str
+    language_id: int
+    test_cases: List[Any]
+    problem_id: Optional[str] = None
+
+class SubmitRequest(BaseModel):
+    problem_id: str
+    code: str
+    language_id: int
+    user_email: str
+
+def get_problem_by_id(problem_id: str):
+    # New structure: PROBLEMS_DB[stage][level] = [problems]
+    for stage in PROBLEMS_DB:
+        for level in ["beginner", "experienced"]:
+            if level in PROBLEMS_DB[stage]:
+                for problem in PROBLEMS_DB[stage][level]:
+                    if problem["id"] == problem_id:
+                        return problem, stage
+    return None, None
+
+def get_difficulty_points(difficulty: str) -> int:
+    points_map = {
+        "Easy": 10,
+        "Medium": 20,
+        "Hard": 30
+    }
+    return points_map.get(difficulty, 10)
+
+async def award_points(user_email: str, problem_id: str, difficulty: str, current_stage: str, runtime_ms: float = 0, memory_mb: float = 0):
+    if current_stage == "playground":
+        return 0, False, False, False
+    
+    try:
+        # Get current user data
+        response = table.get_item(Key={"email": user_email})
+        user = response.get("Item")
+        
+        if not user:
+            return 0, False, False, False
+            
+        solved_problems = user.get("solved_problems", [])
+        is_already_solved = problem_id in solved_problems
+        
+        # 1. Base Points Calculation
+        base_points = get_difficulty_points(difficulty)
+        points_earned = base_points
+        
+        # 2. Optimization Bonus Check
+        is_optimized = False
+        problem_data, _ = get_problem_by_id(problem_id)
+        if problem_data and "optimization_thresholds" in problem_data:
+            thresholds = problem_data["optimization_thresholds"]
+            t_ms = float(thresholds.get("runtime_ms", 0))
+            t_mb = float(thresholds.get("memory_mb", 0))
+            
+            if runtime_ms > 0 and memory_mb > 0 and runtime_ms <= t_ms and memory_mb <= t_mb:
+                is_optimized = True
+                points_earned *= 2
+
+        # 3. Ironman Streak Logic
+        daily_streak_map = user.get("daily_streak_map", {})
+        ironman_awarded = False
+        
+        if not is_already_solved:
+            if current_stage.startswith("day_"):
+                daily_streak_map[current_stage] = True
+                
+                # Check for 7-day completion
+                all_days = [f"day_{i}" for i in range(1, 8)]
+                if all(daily_streak_map.get(d) for d in all_days) and not user.get("ironman_bonus_awarded"):
+                    points_earned += 500
+                    ironman_awarded = True
+            
+            solved_problems.append(problem_id)
+        else:
+            # If already solved, return current state but points_awarded = False
+            return int(user.get("score", 0)), False, is_optimized, False
+
+        new_score = int(user.get("score", 0)) + points_earned
+        
+        # 4. Stage Completion Check (Daily All-Clear)
+        stage_problems = []
+        for level in ["beginner", "experienced"]:
+            if current_stage in PROBLEMS_DB and level in PROBLEMS_DB[current_stage]:
+                stage_problems.extend([p["id"] for p in PROBLEMS_DB[current_stage][level]])
+        
+        stage_problems = list(set(stage_problems))
+        stage_solved_count = sum(1 for p in solved_problems if any(p == sp for sp in stage_problems))
+        
+        daily_clears = user.get("daily_clears", [])
+        if stage_solved_count >= 5 and current_stage not in daily_clears:
+            daily_clears.append(current_stage)
+
+        # Update user in DynamoDB
+        update_expr = "SET score = :s, solved_problems = :p, daily_clears = :dc, daily_streak_map = :ds"
+        expr_attr_vals = {
+            ":s": new_score,
+            ":p": solved_problems,
+            ":dc": daily_clears,
+            ":ds": daily_streak_map
+        }
+        
+        if ironman_awarded:
+            update_expr += ", ironman_bonus_awarded = :iba"
+            expr_attr_vals[":iba"] = True
+
+        table.update_item(
+            Key={"email": user_email},
+            UpdateExpression=update_expr,
+            ExpressionAttributeValues=expr_attr_vals
+        )
+        
+        return new_score, True, is_optimized, ironman_awarded
+    except Exception as e:
+        logger.error(f"Error awarding points: {e}")
+        return 0, False, False, False
 
 async def execute_with_evaluation(user_code: str, problem_id: str, language_id: int):
     # 1. Find the problem
@@ -147,89 +199,31 @@ async def execute_with_evaluation(user_code: str, problem_id: str, language_id: 
     if not problem:
         return {"error": "Problem not found"}
 
-    # 2. Build the combined script based on language
-    combined_code = user_code
-    
-    # Python specific logic
-    if language_id == 71: # Python
-        prepended = COMMON_IMPORTS
-        if "ListNode" in user_code and "class ListNode" not in problem.get('python_driver_code', ''):
-            prepended += LIST_NODE_DEF
-        driver = problem.get('python_driver_code', '')
-        combined_code = f"{prepended}\n{user_code}\n\n{driver}"
+    # 2. Dispatch to either Judge0 or Local Executor
+    if language_id == 71: # Python (using Judge0)
+        combined_code = f"{COMMON_IMPORTS}\n"
+        if "ListNode" in user_code and "class ListNode" not in (problem.get('python_driver_code') or ''):
+            combined_code += LIST_NODE_DEF
+        combined_code += f"{user_code}\n\n{problem.get('python_driver_code', '')}"
         
-        # Send to Judge0 for Python
-        payload = {
-            "source_code": combined_code,
-            "language_id": language_id,
-            "stdin": ""
-        }
+        result = await run_with_judge0(combined_code, language_id)
+        return process_judge0_result(result, problem, stage)
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(JUDGE0_URL, json=payload, timeout=20.0)
-            response.raise_for_status()
-            result = response.json()
-            
-            stdout = result.get("stdout") or ""
-            stderr = result.get("stderr") or ""
-            
-            if "PASS|" in stdout:
-                runtime_beats = round(random.uniform(75.00, 99.99), 2)
-                memory_beats = round(random.uniform(75.00, 99.99), 2)
-                return {
-                    "status": {"description": "Accepted", "id": 3},
-                    "runtime_ms": result.get("time"),
-                    "runtime_beats": runtime_beats,
-                    "memory_mb": result.get("memory"),
-                    "memory_beats": memory_beats,
-                    "stdout": stdout.replace("PASS|ALL_CASES_PASSED", "").strip(),
-                    "difficulty": problem.get("difficulty"),
-                    "stage": stage
-                }
-            elif "FAIL|" in stdout or "ERROR|" in stdout or stderr:
-                return {
-                    "status": {"description": "Wrong Answer", "id": 4},
-                    "message": (stdout + "\n" + stderr).strip()
-                }
-            
-            return {
-                "status": result.get("status"),
-                "stdout": stdout,
-                "stderr": stderr,
-                "compile_output": result.get("compile_output"),
-                "runtime_ms": result.get("time"),
-                "memory_mb": result.get("memory")
-            }
-
-    # C++ local execution
-    elif language_id == 54: 
-        driver = problem.get('cpp_driver_code', '')
-        if not driver:
-            # Fallback to Judge0 if no driver
-            return await run_with_judge0(user_code, language_id)
-        combined_code = f"{CPP_HEADERS}\n{user_code}\n\n{driver}"
+    elif language_id == 54: # C++
+        combined_code = f"{CPP_HEADERS}\n{user_code}\n\n{problem.get('cpp_driver_code', '')}"
         result = run_local_cpp(combined_code)
         return process_local_result(result, problem, stage)
 
-    # C local execution
-    elif language_id == 50:
-        driver = problem.get('c_driver_code', '')
-        if not driver:
-            return await run_with_judge0(user_code, language_id)
-        combined_code = f"{C_HEADERS}\n{user_code}\n\n{driver}"
+    elif language_id == 50: # C
+        combined_code = f"{C_HEADERS}\n{user_code}\n\n{problem.get('c_driver_code', '')}"
         result = run_local_c(combined_code)
         return process_local_result(result, problem, stage)
 
-    # Java local execution
-    elif language_id == 62:
-        driver = problem.get('java_driver_code', '')
-        if not driver:
-            return await run_with_judge0(user_code, language_id)
-        combined_code = f"{JAVA_HEADERS}\n{user_code}\n\n{driver}"
+    elif language_id == 62: # Java
+        combined_code = f"{JAVA_HEADERS}\n{user_code}\n\n{problem.get('java_driver_code', '')}"
         result = run_local_java(combined_code)
         return process_local_result(result, problem, stage)
 
-    # Default for other languages
     return await run_with_judge0(user_code, language_id)
 
 async def run_with_judge0(code: str, language_id: int):
@@ -243,20 +237,35 @@ async def run_with_judge0(code: str, language_id: int):
         response.raise_for_status()
         return response.json()
 
+def process_judge0_result(result, problem, stage):
+    stdout = result.get("stdout") or ""
+    stderr = result.get("stderr") or ""
+    
+    if "PASS|" in stdout:
+        return {
+            "status": {"description": "Accepted", "id": 3},
+            "runtime_ms": float(result.get("time") or 0) * 1000,
+            "memory_mb": float(result.get("memory") or 0) / 1024,
+            "stdout": stdout.replace("PASS|ALL_CASES_PASSED", "").strip(),
+            "difficulty": problem.get("difficulty"),
+            "stage": stage
+        }
+    elif "FAIL|" in stdout or "ERROR|" in stdout or stderr:
+        return {
+            "status": {"description": "Wrong Answer", "id": 4},
+            "message": (stdout + "\n" + stderr).strip()
+        }
+    return result
+
 def process_local_result(result, problem, stage):
     stdout = result.get("stdout") or ""
     stderr = result.get("stderr") or ""
     
     if "PASS|" in stdout:
-        runtime_beats = round(random.uniform(75.00, 99.99), 2)
-        memory_beats = round(random.uniform(75.00, 99.99), 2)
-        # Simulate some random runtime/memory for local runs since we don't have it easily
         return {
             "status": {"description": "Accepted", "id": 3},
             "runtime_ms": round(random.uniform(10, 50), 2),
-            "runtime_beats": runtime_beats,
             "memory_mb": round(random.uniform(2, 10), 2),
-            "memory_beats": memory_beats,
             "stdout": stdout.replace("PASS|ALL_CASES_PASSED", "").strip(),
             "difficulty": problem.get("difficulty"),
             "stage": stage
@@ -265,65 +274,58 @@ def process_local_result(result, problem, stage):
         description = result["status"]["description"]
         if "PASS|" not in stdout and result["status"]["id"] == 3:
              description = "Wrong Answer"
-             
         return {
             "status": {"description": description, "id": result["status"]["id"]},
             "message": (stdout + "\n" + stderr + "\n" + (result.get("compile_output") or "")).strip()
         }
-    
     return result
-
 
 @router.post("/run")
 async def run_code(request: RunRequest):
-    logger.info(f"Running code for problem: {request.problem_id}")
     if request.problem_id:
-        try:
-            return await execute_with_evaluation(request.code, request.problem_id, request.language_id)
-        except Exception as e:
-            logger.error(f"Execution Error: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
-    
-    # Fallback to simple execution if no problem_id
-    prepended = COMMON_IMPORTS
-    if "ListNode" in request.code: prepended += LIST_NODE_DEF
+        return await execute_with_evaluation(request.code, request.problem_id, request.language_id)
     
     payload = {
-        "source_code": f"{prepended}\n{request.code}",
+        "source_code": f"{COMMON_IMPORTS}\n{request.code}",
         "language_id": request.language_id,
         "stdin": ""
     }
-
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(JUDGE0_URL, json=payload, timeout=15.0)
-            response.raise_for_status()
-            result = response.json()
-            return result
-    except Exception as e:
-        logger.error(f"Simple Run Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    async with httpx.AsyncClient() as client:
+        response = await client.post(JUDGE0_URL, json=payload, timeout=15.0)
+        return response.json()
 
 @router.post("/submit")
 async def submit_code(request: SubmitRequest):
-    logger.info(f"Submitting code for problem: {request.problem_id} for user: {request.user_email}")
     try:
         result = await execute_with_evaluation(request.code, request.problem_id, request.language_id)
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
             
-        # Point Awarding Logic
         points_awarded = False
         new_score = 0
+        is_optimized = False
+        ironman_awarded = False
         
         if result.get("status", {}).get("description") == "Accepted":
             difficulty = result.get("difficulty", "Easy")
             stage = result.get("stage", "playground")
-            new_score, points_awarded = await award_points(request.user_email, request.problem_id, difficulty, stage)
+            runtime = result.get("runtime_ms", 0)
+            memory = result.get("memory_mb", 0)
+            
+            new_score, points_awarded, is_optimized, ironman_awarded = await award_points(
+                request.user_email, request.problem_id, difficulty, stage, runtime, memory
+            )
             
         result["points_awarded"] = points_awarded
         result["new_score"] = new_score
-        result["awarded_amount"] = get_difficulty_points(result.get("difficulty", "Easy")) if points_awarded else 0
+        result["is_optimized"] = is_optimized
+        result["ironman_awarded"] = ironman_awarded
+        
+        # Calculate awarded amount
+        base = get_difficulty_points(result.get("difficulty", "Easy"))
+        earned = base * 2 if is_optimized else base
+        if ironman_awarded: earned += 500
+        result["awarded_amount"] = earned if points_awarded else 0
         
         return result
     except Exception as e:
