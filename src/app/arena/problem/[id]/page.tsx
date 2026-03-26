@@ -7,7 +7,7 @@ import {
   Play, Send, Terminal as TerminalIcon, Code2, BookOpen, 
   AlertCircle, X, Loader2, Lock, Bookmark, Settings, 
   RotateCcw, Maximize2, CheckSquare, Trophy, Cpu, Zap,
-  AlertTriangle, ArrowLeft, CheckCircle2
+  AlertTriangle, ArrowLeft, CheckCircle2, History, ChevronRight, ChevronDown
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -38,10 +38,11 @@ export default function ProblemSolvingPage() {
   const [code, setCode] = useState("");
   const [lastResult, setLastResult] = useState<any>(null);
   const [resultType, setResultType] = useState<'run' | 'submit' | null>(null);
-  const [activeTab, setActiveTab] = useState<'testcase' | 'result'>('testcase');
+  const [activeTab, setActiveTab] = useState<'testcase' | 'result' | 'submissions'>('testcase');
   const [activeCase, setActiveCase] = useState(0);
   const [showToast, setShowToast] = useState(false);
   const [toastPoints, setToastPoints] = useState(0);
+  const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null);
 
   // Fetch User Profile
   const { data: profile } = useQuery({
@@ -57,7 +58,7 @@ export default function ProblemSolvingPage() {
   const isSolved = profile?.solved_problems?.includes(id as string);
 
   // Fetch Problem Data
-  const { data: problem, isLoading: isProblemLoading, error: fetchError } = useQuery({
+  const { data: problem, isLoading: isProblemLoading } = useQuery({
     queryKey: ["problem", id],
     queryFn: async () => {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -69,6 +70,18 @@ export default function ProblemSolvingPage() {
       return res.json();
     },
     retry: false,
+  });
+
+  // Fetch Submission History
+  const { data: submissions, isLoading: isSubmissionsLoading } = useQuery({
+    queryKey: ["submissions", id, session?.user?.email],
+    queryFn: async () => {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      const res = await fetch(`${baseUrl}/api/execute/submissions/${id}?user_email=${session?.user?.email}`);
+      if (!res.ok) throw new Error("Failed to fetch submissions");
+      return res.json();
+    },
+    enabled: !!session?.user?.email && activeTab === 'submissions',
   });
 
   // Persistence: Load code from localStorage
@@ -135,6 +148,7 @@ export default function ProblemSolvingPage() {
       setLastResult(data);
       setResultType('submit');
       setActiveTab('result');
+      queryClient.invalidateQueries({ queryKey: ["submissions", id] });
       
       if (data.points_awarded) {
         setToastPoints(data.awarded_amount);
@@ -152,150 +166,126 @@ export default function ProblemSolvingPage() {
     runCodeMutation.mutate({
       code,
       language_id: selectedLanguage.judge0Id,
-      test_cases: problem?.public_test_cases || [],
-      problem_id: id as string,
+      test_cases: problem?.public_test_cases,
+      problem_id: id,
     });
   };
 
   const handleSubmit = () => {
-    if (!session?.user?.email) {
-      alert("Please sign in to submit your solution.");
-      return;
-    }
     submitCodeMutation.mutate({
-      problem_id: id as string,
       code,
       language_id: selectedLanguage.judge0Id,
-      user_email: session.user.email,
+      problem_id: id,
+      user_email: session?.user?.email,
     });
   };
 
   const isPending = runCodeMutation.isPending || submitCodeMutation.isPending;
 
+  // Mobile check
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   if (isProblemLoading) {
     return (
-      <div className="h-screen bg-[#0a0a0a] flex items-center justify-center text-white">
-        <Loader2 className="w-8 h-8 animate-spin text-[#FFC72C]" />
+      <div className="h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 text-[#FFC72C] animate-spin" />
+          <p className="text-white/40 font-mono text-xs uppercase tracking-widest">Initialising Sector...</p>
+        </div>
       </div>
     );
   }
 
-  if (fetchError || !problem) {
-    return (
-      <div className="h-screen bg-[#0a0a0a] flex flex-col items-center justify-center text-white p-6 text-center">
-        <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
-        <h2 className="text-2xl font-black uppercase italic mb-2 tracking-tighter">Problem Sync Error</h2>
-        <p className="text-white/40 font-mono text-sm max-w-md mb-8 uppercase">
-          {fetchError instanceof Error ? fetchError.message : "The requested problem ID could not be found in the current Arena database."}
-        </p>
-        <button 
-          onClick={() => router.push("/arena")}
-          className="px-8 py-3 bg-[#FFC72C] text-black font-black uppercase italic rounded-lg hover:scale-105 transition-transform flex items-center gap-2"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Arena
-        </button>
-      </div>
-    );
-  }
+  const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
+    if (isMobile) return <div className="flex flex-col h-full overflow-y-auto">{children}</div>;
+    return <Group direction="horizontal" className="h-full">{children}</Group>;
+  };
+
+  const ContentPanel = ({ children, defaultSize, minSize }: any) => {
+    if (isMobile) return <div className="w-full flex-shrink-0">{children}</div>;
+    return <Panel defaultSize={defaultSize} minSize={minSize}>{children}</Panel>;
+  };
 
   return (
-    <div className="h-[calc(100vh-64px)] bg-[#0a0a0a] overflow-hidden text-white flex flex-col relative">
-      <AnimatePresence>
-        {showToast && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="absolute top-20 right-8 z-[100] bg-[#111] border border-[#FFC72C] p-4 rounded-xl shadow-[0_0_30px_rgba(255,199,44,0.2)] flex items-center gap-4"
-          >
-            <div className="bg-[#FFC72C] p-2 rounded-lg">
-              <Trophy className="w-6 h-6 text-black" />
-            </div>
-            <div>
-              <p className="text-[10px] text-[#FFC72C] font-black uppercase tracking-widest">Points Awarded</p>
-              <p className="text-xl font-black italic">+{toastPoints} XP</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Top Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-[#111111]">
-        <div className="flex items-center gap-4">
+    <div className="h-screen bg-[#0a0a0a] text-white flex flex-col overflow-hidden">
+      <nav className="h-14 border-b border-white/5 bg-[#0d0d0d] flex items-center justify-between px-6 shrink-0">
+        <div className="flex items-center gap-6">
           <button 
-            onClick={() => router.push(`/arena/day/${problem?.stage || "playground"}`)}
-            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-[#FFC72C] transition-all border border-white/10"
-            title="Back to Day List"
+            onClick={() => router.push('/arena')}
+            className="p-2 hover:bg-white/5 rounded-lg transition-colors group"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 text-white/40 group-hover:text-[#FFC72C] transition-colors" />
           </button>
-          <div className="flex flex-col">
-            <h1 className="text-xl font-black italic tracking-tighter uppercase flex items-center gap-3">
-              Problem <span className="text-[#FFC72C]">{problem?.id || id}</span>
-              {isSolved && (
-                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-black uppercase tracking-tighter">
-                  <CheckCircle2 className="w-3 h-3" />
-                  Solved
-                </span>
-              )}
-            </h1>
-            {problem?.topic && (
-              <p className="text-[9px] text-[#FFC72C] font-mono font-bold uppercase tracking-widest leading-none">
-                {problem.topic}
-              </p>
-            )}
+          <div className="h-4 w-[1px] bg-white/10" />
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-mono text-[#FFC72C] uppercase tracking-widest bg-[#FFC72C]/10 px-2 py-0.5 rounded border border-[#FFC72C]/20">
+              {problem?.difficulty}
+            </span>
+            <h1 className="font-black text-sm uppercase italic tracking-tight">{problem?.title}</h1>
           </div>
-          <div className="h-4 w-px bg-white/10" />
-          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-widest border ${
-            problem?.difficulty === "Easy" ? "bg-green-500/10 text-green-400 border-green-500/20" :
-            problem?.difficulty === "Medium" ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" :
-            "bg-red-500/10 text-red-400 border-red-500/20"
-          }`}>
-            {problem?.difficulty || "Easy"}
-          </span>
         </div>
-        
-        <button 
-          onClick={() => router.push("/arena")}
-          className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all border border-white/10 flex items-center gap-2 text-xs font-bold uppercase tracking-tighter active:scale-95"
-        >
-          <X className="w-4 h-4" />
-          Exit Arena
-        </button>
-      </div>
+
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+            <Trophy className="w-3 h-3 text-[#FFC72C]" />
+            <span className="text-[10px] font-mono font-bold text-white/60">{profile?.score || 0} pts</span>
+          </div>
+          {isSolved && (
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
+              <CheckCircle2 className="w-3 h-3 text-green-500" />
+              <span className="text-[10px] font-mono font-bold text-green-500 uppercase tracking-tighter">Accepted</span>
+            </div>
+          )}
+        </div>
+      </nav>
 
       <div className="flex-1 overflow-hidden">
-        <Group orientation="horizontal">
-          <Panel defaultSize={40} minSize={30}>
-            <div className="h-full border-r border-white/5 bg-[#111111] flex flex-col">
-              <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-                <div className="space-y-6 text-sm text-white/70 leading-relaxed font-sans">
-                  <section>
-                    <h2 className="text-lg font-bold text-white mb-2">{problem?.title || "Loading..."}</h2>
-                    <div 
-                      className={`prose prose-invert prose-sm max-w-none 
-                        prose-p:text-white/70 prose-p:leading-relaxed
-                        prose-code:text-[#FFC72C] prose-code:bg-white/5 prose-code:px-1 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
-                        prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 prose-pre:p-4
-                        prose-ul:list-disc prose-ul:ml-4 prose-li:mb-1
-                        prose-strong:text-white prose-strong:font-bold`}
-                      dangerouslySetInnerHTML={{ __html: problem?.description || "Loading problem description..." }}
-                    />
-                  </section>
-
-                  {problem?.public_test_cases?.length > 0 && (
-                    <section>
-                      <h3 className="text-white font-bold uppercase tracking-widest text-xs flex items-center gap-2 mb-3">
-                        <BookOpen className="w-4 h-4 text-[#FFC72C]" />
-                        Examples
-                      </h3>
-                      <div className="space-y-4">
-                        {problem.public_test_cases.map((tc: any, i: number) => (
-                          <div key={i} className="bg-white/5 border border-white/10 p-4 rounded-lg font-mono text-[13px]">
-                            <p className="text-white/40 mb-1">Example {i+1}:</p>
-                            <p><span className="text-white/40">Input:</span> {tc.input}</p>
-                            <p><span className="text-white/40">Output:</span> {tc.expected}</p>
+        <LayoutWrapper>
+          <ContentPanel defaultSize={40} minSize={30}>
+            <div className="h-full flex flex-col bg-[#0d0d0d] border-r border-white/5">
+              <div className="flex items-center px-4 border-b border-white/5 bg-white/[0.02]">
+                <button className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-[#FFC72C] border-b-2 border-[#FFC72C] flex items-center gap-2">
+                  <BookOpen className="w-3 h-3" />
+                  Description
+                </button>
+                <button className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-white/40 hover:text-white/60 transition-colors flex items-center gap-2">
+                  <AlertCircle className="w-3 h-3" />
+                  Editorial
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+                <div className="prose prose-invert prose-zinc max-w-none">
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: problem?.description || "" }} 
+                    className="text-white/70 text-sm leading-relaxed font-medium selection:bg-[#FFC72C]/30"
+                  />
+                  
+                  {problem?.public_test_cases && (
+                    <section className="mt-12 space-y-8 border-t border-white/5 pt-8">
+                      <h4 className="text-xs font-mono uppercase tracking-[0.3em] text-white/30">Intelligence Data</h4>
+                      <div className="space-y-6">
+                        {problem.public_test_cases.slice(0, 2).map((tc: any, i: number) => (
+                          <div key={i} className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 space-y-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-mono font-bold text-white/20 uppercase tracking-widest">Sample #{i + 1}</span>
+                              <CheckSquare className="w-3 h-3 text-white/10" />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-mono uppercase text-white/30">Input</label>
+                                <div className="bg-[#1a1a1a] p-3 rounded-xl border border-white/5 font-mono text-xs text-white/60">{tc.input}</div>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-mono uppercase text-white/30">Target Output</label>
+                                <div className="bg-[#1a1a1a] p-3 rounded-xl border border-white/5 font-mono text-xs text-[#FFC72C]/60">{tc.expected}</div>
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -304,14 +294,14 @@ export default function ProblemSolvingPage() {
                 </div>
               </div>
             </div>
-          </Panel>
+          </ContentPanel>
 
-          <Separator className="w-1 bg-[#0a0a0a] hover:bg-[#FFC72C]/30 transition-colors" />
+          {!isMobile && <Separator className="w-1 bg-[#0a0a0a] hover:bg-[#FFC72C]/30 transition-colors" />}
 
-          <Panel defaultSize={60}>
-            <Group orientation="vertical">
-              <Panel defaultSize={70}>
-                <div className="h-full flex flex-col bg-[#111111]">
+          <ContentPanel defaultSize={60}>
+            <div className={`h-full flex flex-col ${isMobile ? 'overflow-y-auto' : ''}`}>
+              <div className={`flex flex-col ${isMobile ? 'h-auto' : 'h-full'}`}>
+                <div className={`${isMobile ? 'h-[400px]' : 'flex-[70%]'} flex flex-col bg-[#111111]`}>
                   <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-white/[0.02]">
                     <div className="flex items-center gap-2">
                       <select
@@ -368,6 +358,8 @@ export default function ProblemSolvingPage() {
                         lineNumbers: "on",
                         padding: { top: 16 },
                         fontFamily: "var(--font-mono)",
+                        wordWrap: "on",
+                        wrappingIndent: "indent"
                       }}
                     />
                   </div>
@@ -396,12 +388,10 @@ export default function ProblemSolvingPage() {
                     </div>
                   </div>
                 </div>
-              </Panel>
 
-              <Separator className="h-1 bg-[#0a0a0a] hover:bg-[#FFC72C]/30 transition-colors" />
+                {!isMobile && <Separator className="h-1 bg-[#0a0a0a] hover:bg-[#FFC72C]/30 transition-colors" />}
 
-              <Panel defaultSize={30}>
-                <div className="h-full bg-[#0d0d0d] flex flex-col">
+                <div className={`${isMobile ? 'h-[500px]' : 'flex-[30%]'} bg-[#0d0d0d] flex flex-col overflow-hidden`}>
                   <div className="flex items-center px-4 border-b border-white/5 bg-white/[0.02]">
                     <button 
                       onClick={() => setActiveTab('testcase')}
@@ -421,10 +411,56 @@ export default function ProblemSolvingPage() {
                       <TerminalIcon className="w-3 h-3" />
                       Test Result
                     </button>
+                    <button 
+                      onClick={() => setActiveTab('submissions')}
+                      className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${
+                        activeTab === 'submissions' ? 'border-[#FFC72C] text-[#FFC72C]' : 'border-transparent text-white/40 hover:text-white/60'
+                      }`}
+                    >
+                      <History className="w-3 h-3" />
+                      Submissions
+                    </button>
                   </div>
 
                   <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-                    {activeTab === 'result' && lastResult ? (
+                    {activeTab === 'submissions' ? (
+                        <div className="space-y-4">
+                            {isSubmissionsLoading ? (
+                                <div className="flex items-center justify-center p-12"><Loader2 className="w-6 h-6 animate-spin text-white/20" /></div>
+                            ) : !submissions || submissions?.length === 0 ? (
+                                <div className="text-center p-12 text-white/20 text-xs font-mono">No submissions yet.</div>
+                            ) : submissions?.map((sub: any) => (
+                                <div key={sub.submission_id} className="border border-white/5 rounded-xl overflow-hidden bg-white/[0.02]">
+                                    <div 
+                                        onClick={() => setExpandedSubmission(expandedSubmission === sub.submission_id ? null : sub.submission_id)}
+                                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.03] transition-colors"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${sub.status === 'Accepted' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                                                {sub.status}
+                                            </span>
+                                            <span className="text-[10px] text-white/40 font-mono">{new Date(sub.timestamp).toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex items-center gap-6">
+                                            <div className="hidden sm:flex items-center gap-4 text-[10px] text-white/20 font-mono">
+                                                <span>{sub.language}</span>
+                                                <span>{sub.runtime_ms}ms</span>
+                                                <span>{sub.memory_mb}MB</span>
+                                            </div>
+                                            {expandedSubmission === sub.submission_id ? <ChevronDown className="w-4 h-4 text-white/20" /> : <ChevronRight className="w-4 h-4 text-white/20" />}
+                                        </div>
+                                    </div>
+                                    {expandedSubmission === sub.submission_id && (
+                                        <div className="p-4 bg-black/40 border-t border-white/5">
+                                            <pre className="text-[11px] font-mono text-white/60 overflow-x-auto whitespace-pre">
+                                                {sub.code}
+                                            </pre>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : activeTab === 'result' && lastResult ? (
                       lastResult.error ? (
                         <div className="space-y-4 border border-red-500/20 bg-red-500/5 p-4 rounded-xl">
                            <div className="flex items-center gap-2 text-red-500">
@@ -574,17 +610,40 @@ export default function ProblemSolvingPage() {
                     )}
                   </div>
                 </div>
-              </Panel>
-            </Group>
-          </Panel>
+              </div>
+            </div>
+          </ContentPanel>
         </Group>
       </div>
+
+      <AnimatePresence>
+        {showToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-[#FFC72C] text-black px-8 py-4 rounded-2xl shadow-[0_0_50px_rgba(255,199,44,0.3)] flex items-center gap-4 border-2 border-white/20"
+          >
+            <div className="bg-black/10 p-2 rounded-full">
+              <Trophy className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Objective Secured</p>
+              <p className="text-xl font-black italic tracking-tighter">+{toastPoints} XP EARNED</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 199, 44, 0.3); }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
       `}</style>
     </div>
   );

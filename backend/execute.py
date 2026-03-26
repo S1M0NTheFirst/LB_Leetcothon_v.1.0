@@ -4,12 +4,14 @@ import logging
 import random
 import boto3
 import pytz
+import uuid
 from datetime import datetime
 from typing import List, Optional, Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from database import PROBLEMS_DB, LIST_NODE_DEF
 from local_executor import run_local_cpp, run_local_c, run_local_java
+from decimal import Decimal
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -18,6 +20,8 @@ PT_TZ = pytz.timezone("America/Los_Angeles")
 
 # DynamoDB Setup
 TABLE_NAME = os.getenv("DYNAMODB_TABLE_NAME", "Users")
+SUBMISSIONS_TABLE = os.getenv("DYNAMODB_SUBMISSIONS_TABLE", "Submissions")
+
 dynamodb = boto3.resource(
     "dynamodb",
     region_name=os.getenv("AWS_REGION", "us-east-1"),
@@ -25,6 +29,7 @@ dynamodb = boto3.resource(
     aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
 )
 table = dynamodb.Table(TABLE_NAME)
+submissions_table = dynamodb.Table(SUBMISSIONS_TABLE)
 
 router = APIRouter(prefix="/api/execute", tags=["execute"])
 
@@ -142,7 +147,6 @@ async def award_points(user_email: str, problem_id: str, difficulty: str, curren
             if current_stage.startswith("day_"):
                 daily_streak_map[current_stage] = True
                 
-                # Check for 7-day completion
                 all_days = [f"day_{i}" for i in range(1, 8)]
                 if all(daily_streak_map.get(d) for d in all_days) and not user.get("ironman_bonus_awarded"):
                     points_earned += 500
@@ -150,12 +154,11 @@ async def award_points(user_email: str, problem_id: str, difficulty: str, curren
             
             solved_problems.append(problem_id)
         else:
-            # If already solved, return current state but points_awarded = False
             return int(user.get("score", 0)), False, is_optimized, False
 
         new_score = int(user.get("score", 0)) + points_earned
         
-        # 4. Stage Completion Check (Daily All-Clear)
+        # 4. Stage Completion Check
         stage_problems = []
         for level in ["beginner", "experienced"]:
             if current_stage in PROBLEMS_DB and level in PROBLEMS_DB[current_stage]:
@@ -168,10 +171,9 @@ async def award_points(user_email: str, problem_id: str, difficulty: str, curren
         if stage_solved_count >= 5 and current_stage not in daily_clears:
             daily_clears.append(current_stage)
 
-        # Update user in DynamoDB
         update_expr = "SET score = :s, solved_problems = :p, daily_clears = :dc, daily_streak_map = :ds"
         expr_attr_vals = {
-            ":s": new_score,
+            ":s": Decimal(str(new_score)),
             ":p": solved_problems,
             ":dc": daily_clears,
             ":ds": daily_streak_map
@@ -193,14 +195,11 @@ async def award_points(user_email: str, problem_id: str, difficulty: str, curren
         return 0, False, False, False
 
 async def execute_with_evaluation(user_code: str, problem_id: str, language_id: int):
-    # 1. Find the problem
     problem, stage = get_problem_by_id(problem_id)
-    
     if not problem:
         return {"error": "Problem not found"}
 
-    # 2. Dispatch to either Judge0 or Local Executor
-    if language_id == 71: # Python (using Judge0)
+    if language_id == 71: # Python
         combined_code = f"{COMMON_IMPORTS}\n"
         if "ListNode" in user_code and "class ListNode" not in (problem.get('python_driver_code') or ''):
             combined_code += LIST_NODE_DEF
@@ -280,6 +279,21 @@ def process_local_result(result, problem, stage):
         }
     return result
 
+@router.get("/submissions/{problem_id}")
+async def get_submissions(problem_id: str, user_email: str):
+    try:
+        from boto3.dynamodb.conditions import Key
+        # This requires a GSI or specific PK/SK setup. 
+        # Using PK=user_email, SK=problem_id#timestamp for this logic.
+        response = submissions_table.query(
+            KeyConditionExpression=Key('user_email').eq(user_email) & Key('problem_id_timestamp').begins_with(f"{problem_id}#"),
+            ScanIndexForward=False
+        )
+        return response.get("Items", [])
+    except Exception as e:
+        logger.error(f"Submissions Fetch Error: {e}")
+        return []
+
 @router.post("/run")
 async def run_code(request: RunRequest):
     if request.problem_id:
@@ -321,11 +335,30 @@ async def submit_code(request: SubmitRequest):
         result["is_optimized"] = is_optimized
         result["ironman_awarded"] = ironman_awarded
         
-        # Calculate awarded amount
         base = get_difficulty_points(result.get("difficulty", "Easy"))
         earned = base * 2 if is_optimized else base
         if ironman_awarded: earned += 500
         result["awarded_amount"] = earned if points_awarded else 0
+
+        # SAVE HISTORY
+        try:
+            timestamp = datetime.now(PT_TZ).isoformat()
+            lang_name = {71: "Python", 54: "C++", 50: "C", 62: "Java"}.get(request.language_id, "Unknown")
+            submissions_table.put_item(Item={
+                "user_email": request.user_email,
+                "problem_id_timestamp": f"{request.problem_id}#{timestamp}",
+                "submission_id": str(uuid.uuid4()),
+                "problem_id": request.problem_id,
+                "timestamp": timestamp,
+                "status": result.get("status", {}).get("description", "Unknown"),
+                "runtime_ms": Decimal(str(result.get("runtime_ms", 0))),
+                "memory_mb": Decimal(str(result.get("memory_mb", 0.0))),
+                "language": lang_name,
+                "code": request.code,
+                "is_optimized": is_optimized
+            })
+        except Exception as se:
+            logger.error(f"History Save Error: {se}")
         
         return result
     except Exception as e:
