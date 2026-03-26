@@ -613,7 +613,7 @@ export default function ProblemSolvingPage() {
               </div>
             </div>
           </ContentPanel>
-        </Group>
+        </LayoutWrapper>
       </div>
 
       <AnimatePresence>
