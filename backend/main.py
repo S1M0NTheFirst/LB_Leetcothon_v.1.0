@@ -125,8 +125,6 @@ async def get_leaderboard():
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/problems/daily")
-...
-
 async def get_daily_problems(level: Literal["beginner", "experienced"] = Query(...)):
     stage = get_current_stage()
     topic = DAY_TOPICS.get(stage, "The Arena")

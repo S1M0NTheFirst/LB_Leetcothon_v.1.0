@@ -30,12 +30,11 @@ export default function LeaderboardPage() {
   const { data: leaderboard, isLoading } = useQuery<LeaderboardUser[]>({
     queryKey: ["leaderboard"],
     queryFn: async () => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await fetch(`${baseUrl}/api/leaderboard`);
+      const res = await fetch("/api/leaderboard");
       if (!res.ok) throw new Error("Failed to fetch leaderboard");
       return res.json();
     },
-    refetchInterval: 10000, // Refresh every 10s
+    refetchInterval: 10000,
   });
 
   useEffect(() => {
@@ -58,9 +57,15 @@ export default function LeaderboardPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Calculate current stage for streak highlights
+  const eventStart = new Date("2026-03-30T00:00:00-07:00");
+  const now = new Date();
+  const diffTime = now.getTime() - eventStart.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const currentStage = diffDays >= 0 && diffDays < 7 ? `day_${diffDays + 1}` : "playground";
+
   return (
     <main className="min-h-screen bg-zinc-950 text-white pt-24 pb-12 px-6 relative overflow-hidden">
-      {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/5 blur-[120px] rounded-full" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-yellow-500/5 blur-[120px] rounded-full" />
@@ -93,7 +98,6 @@ export default function LeaderboardPage() {
           </div>
         </div>
 
-        {/* Global Rankings Card */}
         <div className="bg-zinc-900/50 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-sm shadow-2xl">
           <div className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -138,7 +142,13 @@ export default function LeaderboardPage() {
                   
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 overflow-hidden">
-                        {user.image ? <img src={user.image} alt={user.name} /> : <div className="w-full h-full flex items-center justify-center text-xs text-white/20">?</div>}
+                        {user.image ? (
+                          <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[10px] text-white/20 font-mono">
+                            {user.name.substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
@@ -153,12 +163,11 @@ export default function LeaderboardPage() {
                 </div>
 
                 <div className="flex flex-col md:flex-row md:items-center gap-8">
-                    {/* Streak Tracker Integrated */}
                     <div className="w-full md:w-48">
                         <StreakTracker 
                             streakMap={user.streak_map} 
                             isIronman={user.is_ironman} 
-                            currentStage="day_1" // Logic can be improved to get dynamic stage
+                            currentStage={currentStage}
                         />
                     </div>
 
