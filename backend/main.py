@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import pytz
 from database import PROBLEMS_DB, DAY_TOPICS
 from execute import router as execute_router
+from wagers import router as wagers_router
 from connection_manager import manager
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -34,6 +35,7 @@ app = FastAPI()
 
 # Include Routers
 app.include_router(execute_router)
+app.include_router(wagers_router)
 
 # Add CORSMiddleware
 app.add_middleware(

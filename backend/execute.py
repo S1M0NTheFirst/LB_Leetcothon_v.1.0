@@ -13,7 +13,97 @@ from local_executor import run_local_cpp, run_local_c, run_local_java
 logger = logging.getLogger(__name__)
 
 # DynamoDB Setup
-# ... (rest of setup)
+TABLE_NAME = os.getenv("DYNAMODB_TABLE_NAME", "Users")
+dynamodb = boto3.resource(
+    "dynamodb",
+    region_name=os.getenv("AWS_REGION", "us-east-1"),
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
+)
+table = dynamodb.Table(TABLE_NAME)
+
+router = APIRouter(prefix="/api/execute", tags=["execute"])
+
+JUDGE0_URL = "https://ce.judge0.com/submissions?base64_encoded=false&wait=true"
+
+# Common imports to prepend to all Python submissions
+COMMON_IMPORTS = """
+from typing import List, Optional, Any, Dict
+import collections
+import math
+import heapq
+import bisect
+
+"""
+
+def get_problem_by_id(problem_id: str):
+    # New structure: PROBLEMS_DB[stage][level] = [problems]
+    for stage in PROBLEMS_DB:
+        for level in ["beginner", "experienced"]:
+            if level in PROBLEMS_DB[stage]:
+                for problem in PROBLEMS_DB[stage][level]:
+                    if problem["id"] == problem_id:
+                        return problem, stage
+    return None, None
+
+def get_difficulty_points(difficulty: str) -> int:
+    points_map = {
+        "Easy": 10,
+        "Medium": 20,
+        "Hard": 30
+    }
+    return points_map.get(difficulty, 10)
+
+async def award_points(user_email: str, problem_id: str, difficulty: str, current_stage: str):
+    if current_stage == "playground":
+        return 0, False
+    
+    try:
+        # Get current user data
+        response = table.get_item(Key={"email": user_email})
+        user = response.get("Item")
+        
+        if not user:
+            return 0, False
+            
+        solved_problems = user.get("solved_problems", [])
+        if problem_id in solved_problems:
+            return user.get("score", 0), False
+            
+        points_to_award = get_difficulty_points(difficulty)
+        new_score = int(user.get("score", 0)) + points_to_award
+        
+        # Add to solved_problems
+        solved_problems.append(problem_id)
+        
+        # Check if they just cleared the whole stage (5 problems)
+        stage_problems = []
+        for level in ["beginner", "experienced"]:
+            if current_stage in PROBLEMS_DB and level in PROBLEMS_DB[current_stage]:
+                stage_problems.extend([p["id"] for p in PROBLEMS_DB[current_stage][level]])
+        
+        stage_problems = list(set(stage_problems))
+        stage_solved_count = sum(1 for p in solved_problems if any(p == sp for sp in stage_problems))
+        
+        daily_clears = user.get("daily_clears", [])
+        if stage_solved_count >= 5 and current_stage not in daily_clears:
+            daily_clears.append(current_stage)
+
+        # Update user in DynamoDB
+        table.update_item(
+            Key={"email": user_email},
+            UpdateExpression="SET score = :s, solved_problems = :p, daily_clears = :dc",
+            ExpressionAttributeValues={
+                ":s": new_score,
+                ":p": solved_problems,
+                ":dc": daily_clears
+            }
+        )
+        
+        return new_score, True
+    except Exception as e:
+        logger.error(f"Error awarding points: {e}")
+        return 0, False
 
 # Common headers for languages
 CPP_HEADERS = """
