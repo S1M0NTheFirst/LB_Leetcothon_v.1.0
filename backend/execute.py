@@ -91,7 +91,17 @@ class SubmitRequest(BaseModel):
     user_email: str
 
 def get_problem_by_id(problem_id: str):
-    # New structure: PROBLEMS_DB[stage][level] = [problems]
+    event_stage = get_current_event_stage()
+    
+    # Prioritize finding the problem in the current event stage
+    if event_stage != "playground" and event_stage in PROBLEMS_DB:
+        for level in ["beginner", "experienced"]:
+            if level in PROBLEMS_DB[event_stage]:
+                for problem in PROBLEMS_DB[event_stage][level]:
+                    if problem["id"] == problem_id:
+                        return problem, event_stage
+
+    # If not found in current event stage, search all stages
     for stage in PROBLEMS_DB:
         for level in ["beginner", "experienced"]:
             if level in PROBLEMS_DB[stage]:
