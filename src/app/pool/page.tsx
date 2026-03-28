@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Lock, 
   Coins, 
@@ -11,201 +11,386 @@ import {
   Timer, 
   TrendingUp, 
   Zap,
-  Info
+  Info,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import LockedSection from "@/components/LockedSection";
 
 export default function PredictionPoolPage() {
-  const [countdown, setCountdown] = useState("");
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
+  const [betAmount, setBetAmount] = useState<number>(50);
+  const [selectedPool, setSelectedPool] = useState<"daily_all_clear" | "ironman_streak" | null>(null);
 
-  useEffect(() => {
-    const targetDate = new Date("2026-03-30T00:00:00").getTime();
+  // Fetch Pool Stats
+  const { data: stats, isLoading: isStatsLoading } = useQuery({
+    queryKey: ["wagerStats", session?.user?.email],
+    queryFn: async () => {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      const res = await fetch(`${baseUrl}/api/wagers/stats?user_email=${session?.user?.email}`);
+      if (!res.ok) throw new Error("Failed to fetch stats");
+      return res.json();
+    },
+    enabled: !!session?.user?.email,
+    refetchInterval: 5000,
+  });
 
-    const updateCountdown = () => {
-      const now = new Date().getTime();
-      const distance = targetDate - now;
+  // Fetch User Profile
+  const { data: profile } = useQuery({
+    queryKey: ["userProfile"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/profile");
+      return res.json();
+    },
+    enabled: !!session?.user?.email,
+  });
 
-      if (distance < 0) {
-        setCountdown("EVENT LIVE");
-        return;
+  // Join Wager Mutation
+  const joinMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      const res = await fetch(`${baseUrl}/api/wagers/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to join pool");
       }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wagerStats"] });
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+      setSelectedPool(null);
+      alert("Bet placed successfully! Good luck, Hacker.");
+    },
+    onError: (error: Error) => {
+      alert(error.message);
+    }
+  });
 
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+  const handlePlaceBet = () => {
+    if (!selectedPool) return;
+    if (betAmount > (profile?.score || 0)) {
+        alert("Insufficient points!");
+        return;
+    }
 
-      setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-    };
-
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    joinMutation.mutate({
+      user_email: session?.user?.email,
+      amount: betAmount,
+      prediction_type: selectedPool
+    });
+  };
 
   const categories = [
     {
-      id: "next",
-      title: "Solve Next Problem",
-      description: "Predict if you will solve your next attempted problem within the time limit.",
-      icon: <Target className="w-6 h-6 text-[#FFC72C]" />,
-      odds: "1.5x"
-    },
-    {
-      id: "all",
-      title: "Solve All Today",
-      description: "Commit to clearing all 5 problems in your current track today.",
+      id: "daily_all_clear",
+      title: "Daily All-Clear",
+      description: "Predict if you will solve all 5 problems for today's active stage.",
       icon: <Zap className="w-6 h-6 text-[#FFC72C]" />,
-      odds: "3.2x"
+      stats: stats?.daily,
+      isJoined: stats?.daily?.is_joined
     },
     {
-      id: "streak",
-      title: "Stay on Track",
-      description: "Maintain a perfect 7-day solve streak starting from today.",
+      id: "ironman_streak",
+      title: "Ironman Streak",
+      description: "One-time bet: Solve at least 1 problem every single day of the event.",
       icon: <Flame className="w-6 h-6 text-[#FFC72C]" />,
-      odds: "5.0x"
+      stats: stats?.ironman,
+      isJoined: stats?.ironman?.is_joined
     }
   ];
+
+  const calculatePotentialPayout = () => {
+    if (!selectedPool || !stats) return 0;
+    const pool = selectedPool === "daily_all_clear" ? stats.daily : stats.ironman;
+    if (!pool) return 0;
+    
+    const currentPot = pool.total_pot || 0;
+    const currentParticipants = pool.participants || 0;
+    
+    return Math.floor((currentPot + betAmount) / (currentParticipants + 1) * 0.95);
+  };
+
+  const totalCommunityPot = (stats?.daily?.total_pot || 0) + (stats?.ironman?.total_pot || 0);
 
   return (
     <div className="min-h-screen bg-[#111111] text-white selection:bg-[#FFC72C] selection:text-black relative overflow-hidden">
       
-      {/* LOCKED OVERLAY - ULTRA TRANSPARENT */}
-      <div className="fixed inset-0 top-16 z-40 flex flex-col items-center justify-center bg-[#111111]/20 backdrop-blur-[1px]">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center p-10 rounded-3xl border border-white/20 bg-[#1a1a1a]/40 backdrop-blur-md shadow-2xl text-center max-w-sm mx-6"
-        >
-          <div className="bg-[#FFC72C]/10 p-5 rounded-full mb-6 border border-[#FFC72C]/30 shadow-[0_0_30px_rgba(255,199,44,0.1)]">
-            <Lock className="w-10 h-10 text-[#FFC72C]" />
-          </div>
-          <h2 className="text-xl font-black uppercase italic tracking-tighter mb-2">
-            Pool <span className="text-[#FFC72C]">Locked</span>
-          </h2>
-          <p className="text-white/60 font-mono text-[10px] uppercase tracking-widest mb-6">
-            Objective Selection Restricted
-          </p>
-          
-          <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-xl w-full">
-            <div className="flex items-center justify-center gap-3 text-[#FFC72C] font-black text-xl font-mono italic">
-              <Timer className="w-4 h-4" />
-              {countdown}
-            </div>
-          </div>
-        </motion.div>
-      </div>
+      {/* LOCKED OVERLAY */}
+      <LockedSection title="Prediction Pool" variant="overlay" />
 
-      <div className="max-w-7xl mx-auto px-6 py-12 pb-32">
-        {/* Header */}
-        <div className="flex flex-col items-center mb-16">
-          <motion.div 
-            animate={{ 
-              boxShadow: ["0 0 20px rgba(255,199,44,0.1)", "0 0 40px rgba(255,199,44,0.2)", "0 0 20px rgba(255,199,44,0.1)"]
-            }}
-            transition={{ duration: 3, repeat: Infinity }}
-            className="relative w-64 h-64 flex items-center justify-center rounded-full bg-white/[0.02] border border-white/5"
-          >
-            {/* Spinning Ring */}
-            <div className="absolute inset-0 rounded-full border-2 border-dashed border-[#FFC72C]/30 animate-[spin_10s_linear_infinite]" />
-            <div className="absolute inset-4 rounded-full border border-white/5" />
-            
-            <div className="text-center z-10">
-              <p className="text-[10px] font-mono text-white/40 uppercase tracking-[0.3em] mb-1">Current Pool</p>
-              <h3 className="text-4xl font-black text-white italic tracking-tighter">24,500</h3>
-              <p className="text-[#FFC72C] font-black text-sm uppercase italic">Points</p>
-              
-              <div className="mt-4 flex items-center justify-center gap-1 text-[10px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-full">
-                <TrendingUp className="w-3 h-3" />
-                +12% vs Yesterday
+      <div className="max-w-7xl mx-auto px-6 py-12 pb-48">
+        
+        {/* Header Section - Dual Pools */}
+        <div className="flex flex-col md:flex-row items-center justify-center gap-12 mb-16">
+          {/* Daily Pool Display */}
+          <div className="flex flex-col items-center">
+            <motion.div 
+              animate={{ boxShadow: ["0 0 20px rgba(255,199,44,0.02)", "0 0 40px rgba(255,199,44,0.1)", "0 0 20px rgba(255,199,44,0.02)"] }}
+              transition={{ duration: 4, repeat: Infinity }}
+              className="relative w-56 h-56 flex items-center justify-center rounded-full bg-white/[0.01] border border-white/5"
+            >
+              <div className="absolute inset-0 rounded-full border border-dashed border-[#FFC72C]/10 animate-[spin_30s_linear_infinite]" />
+              <div className="text-center z-10">
+                <p className="text-[9px] font-mono text-white/30 uppercase tracking-[0.3em] mb-1">Daily Pool</p>
+                <h3 className="text-4xl font-black text-white italic tracking-tighter">
+                  {isStatsLoading ? "---" : (stats?.daily?.total_pot || 0).toLocaleString()}
+                </h3>
+                <p className="text-[#FFC72C]/60 font-black text-[10px] uppercase italic">Current Pot</p>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
+
+          {/* VS Divider or Total */}
+          <div className="hidden md:flex flex-col items-center opacity-20">
+            <div className="h-20 w-[1px] bg-gradient-to-b from-transparent via-[#FFC72C] to-transparent" />
+            <span className="font-mono text-[10px] my-2">VS</span>
+            <div className="h-20 w-[1px] bg-gradient-to-b from-transparent via-[#FFC72C] to-transparent" />
+          </div>
+
+          {/* Ironman Pool Display */}
+          <div className="flex flex-col items-center">
+            <motion.div 
+              animate={{ boxShadow: ["0 0 20px rgba(255,199,44,0.02)", "0 0 40px rgba(255,199,44,0.1)", "0 0 20px rgba(255,199,44,0.02)"] }}
+              transition={{ duration: 4, repeat: Infinity, delay: 1 }}
+              className="relative w-56 h-56 flex items-center justify-center rounded-full bg-white/[0.01] border border-white/5"
+            >
+              <div className="absolute inset-0 rounded-full border border-dashed border-[#FFC72C]/10 animate-[spin_25s_linear_infinite_reverse]" />
+              <div className="text-center z-10">
+                <p className="text-[9px] font-mono text-white/30 uppercase tracking-[0.3em] mb-1">Ironman Pool</p>
+                <h3 className="text-4xl font-black text-white italic tracking-tighter">
+                  {isStatsLoading ? "---" : (stats?.ironman?.total_pot || 0).toLocaleString()}
+                </h3>
+                <p className="text-[#FFC72C]/60 font-black text-[10px] uppercase italic">Current Pot</p>
+              </div>
+            </motion.div>
+          </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {/* Total Summary Mini-Bar */}
+        <div className="flex justify-center mb-16">
+          <div className="px-6 py-2 bg-white/[0.02] border border-white/5 rounded-full flex items-center gap-4">
+            <span className="text-[10px] font-mono text-white/20 uppercase tracking-widest">Global Community Stake:</span>
+            <span className="text-sm font-black text-[#FFC72C] italic">{totalCommunityPot.toLocaleString()} PTS</span>
+          </div>
+        </div>
+
+        {/* Betting Categories */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
           {categories.map((cat) => (
             <motion.div 
               key={cat.id}
-              className="group p-8 rounded-2xl border border-white/5 bg-white/[0.03] relative overflow-hidden transition-all"
+              onClick={() => {
+                if (cat.isJoined) return;
+                setSelectedPool(selectedPool === cat.id ? null : cat.id as any);
+              }}
+              className={`group p-8 rounded-3xl border transition-all cursor-pointer relative overflow-hidden ${
+                selectedPool === cat.id 
+                  ? "bg-[#FFC72C]/10 border-[#FFC72C]/50 shadow-[0_0_30px_rgba(255,199,44,0.1)]" 
+                  : cat.isJoined
+                    ? "bg-green-500/5 border-green-500/20 opacity-80 cursor-default"
+                    : "bg-white/[0.03] border-white/5 hover:bg-white/[0.05] hover:border-white/10"
+              }`}
             >
-              <div className="mb-6 flex justify-between items-start">
-                <div className="p-3 rounded-xl bg-white/5 transition-colors">
+              <div className="mb-8 flex justify-between items-start">
+                <div className={`p-4 rounded-2xl ${selectedPool === cat.id ? "bg-[#FFC72C]/20" : "bg-white/5"}`}>
                   {cat.icon}
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest">Payout</p>
-                  <p className="text-[#FFC72C] font-black italic">{cat.odds}</p>
+                  <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Live Pot</p>
+                  <p className="text-2xl font-black text-[#FFC72C] italic">{(cat.stats?.total_pot || 0).toLocaleString()}</p>
                 </div>
               </div>
               
-              <h4 className="text-lg font-bold text-white mb-2 uppercase tracking-tight">{cat.title}</h4>
-              <p className="text-xs text-white/40 leading-relaxed font-medium mb-8">
+              <h4 className="text-xl font-black text-white mb-2 uppercase italic tracking-tight">{cat.title}</h4>
+              <p className="text-sm text-white/50 leading-relaxed mb-8">
                 {cat.description}
               </p>
 
-              <div className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full border-2 border-white/10 flex items-center justify-center transition-colors">
-                  <div className="w-2 h-2 rounded-full bg-white/10 transition-colors" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-white/20" />
+                    <span className="text-[10px] font-mono text-white/30 uppercase tracking-widest">
+                        {(cat.stats?.participants || 0)} Hackers Joined
+                    </span>
                 </div>
-                <span className="text-[10px] font-bold text-white/20 transition-colors uppercase">Select Objective</span>
+                {cat.isJoined ? (
+                    <div className="flex items-center gap-2 text-green-400 font-black text-[10px] uppercase italic">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Active Wager
+                    </div>
+                ) : (
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPool === cat.id ? "border-[#FFC72C] bg-[#FFC72C]" : "border-white/10"}`}>
+                        {selectedPool === cat.id && <div className="w-2 h-2 rounded-full bg-black" />}
+                    </div>
+                )}
               </div>
-
-              {/* Decorative gradient corner */}
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#FFC72C]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </motion.div>
           ))}
         </div>
 
-        {/* Info Card */}
-        <div className="bg-[#FFC72C]/5 border border-[#FFC72C]/10 p-6 rounded-2xl flex gap-4 items-start max-w-2xl mx-auto">
-          <Info className="w-5 h-5 text-[#FFC72C] shrink-0 mt-0.5" />
-          <div>
-            <h5 className="text-sm font-bold text-white uppercase mb-1">How it works</h5>
-            <p className="text-xs text-white/50 leading-relaxed">
-              Place bets using your hard-earned points. If you complete the objective, you win points based on the payout multiplier. If you fail, the points are added back to the community pool for the final prize distribution.
-            </p>
-          </div>
+        {/* Info & Active Wagers */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-6">
+                <div className="bg-[#FFC72C]/5 border border-[#FFC72C]/10 p-8 rounded-3xl flex gap-6 items-start">
+                    <Info className="w-6 h-6 text-[#FFC72C] shrink-0 mt-1" />
+                    <div>
+                        <h5 className="text-lg font-black text-white uppercase italic mb-2">The Mechanics</h5>
+                        <ul className="text-sm text-white/50 space-y-3 font-medium">
+                            <li className="flex gap-2">
+                                <span className="text-[#FFC72C] font-bold">01.</span>
+                                Stake your points on your own performance. Failed bets return to the Community Pot.
+                            </li>
+                            <li className="flex gap-2">
+                                <span className="text-[#FFC72C] font-bold">02.</span>
+                                Winners split the total pot of their category equally. 
+                            </li>
+                            <li className="flex gap-2">
+                                <span className="text-[#FFC72C] font-bold">03.</span>
+                                A 5% platform fee is deducted from the pot for event hardware & prizes.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                {/* Active Wagers List */}
+                {stats?.user_wagers?.length > 0 && (
+                    <div className="bg-white/[0.02] border border-white/5 p-8 rounded-3xl">
+                        <h5 className="text-sm font-mono text-white/40 uppercase tracking-[0.3em] mb-6">Your Active Wagers</h5>
+                        <div className="space-y-4">
+                            {stats.user_wagers.map((wager: any, idx: number) => (
+                                <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-2 bg-[#FFC72C]/10 rounded-lg">
+                                            <Target className="w-4 h-4 text-[#FFC72C]" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-white uppercase">{wager.prediction_type?.replace(/_/g, ' ')}</p>
+                                            <p className="text-[10px] text-white/30 font-mono">{wager.pool_id}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-black text-[#FFC72C]">{wager.amount_bet} PTS</p>
+                                        <p className="text-[10px] text-green-400 font-bold uppercase italic">In Play</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="bg-white/[0.02] border border-white/5 p-8 rounded-3xl h-fit">
+                 <h5 className="text-sm font-mono text-white/40 uppercase tracking-[0.3em] mb-6">Pool Insights</h5>
+                 <div className="space-y-6">
+                    <div>
+                        <p className="text-[10px] text-white/30 uppercase mb-1">Largest Payout Target</p>
+                        <p className="text-lg font-black text-white italic tracking-tighter">IRONMAN STREAK</p>
+                    </div>
+                    <div className="p-4 bg-[#FFC72C]/5 rounded-2xl border border-[#FFC72C]/10">
+                         <p className="text-[10px] text-[#FFC72C] font-bold uppercase mb-2">Platform Stability</p>
+                         <div className="flex items-center gap-2">
+                            <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
+                                <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: "98%" }}
+                                    className="h-full bg-[#FFC72C]"
+                                />
+                            </div>
+                            <span className="text-[10px] font-mono text-white/50">98%</span>
+                         </div>
+                    </div>
+                 </div>
+            </div>
         </div>
       </div>
 
-      {/* BETTING CONSOLE (FIXED FOOTER - DISABLED) */}
-      <div className="fixed bottom-0 left-0 right-0 z-[60] bg-[#111111]/80 backdrop-blur-xl border-t border-white/10 p-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 opacity-50">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-full bg-[#FFC72C]/10 border border-[#FFC72C]/20">
-              <Coins className="w-6 h-6 text-[#FFC72C]" />
-            </div>
-            <div>
-              <p className="text-[10px] font-mono text-white/20 uppercase tracking-[0.2em]">Available Balance</p>
-              <p className="text-xl font-black text-white italic tracking-tighter">
-                150 <span className="text-[#FFC72C] text-sm uppercase">pts</span>
-              </p>
-            </div>
-          </div>
+      {/* BETTING CONSOLE (FIXED FOOTER) */}
+      <AnimatePresence>
+        {selectedPool && (
+          <motion.div 
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            exit={{ y: 100 }}
+            className="fixed bottom-0 left-0 right-0 z-[60] bg-[#111111]/90 backdrop-blur-2xl border-t border-[#FFC72C]/20 p-8 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]"
+          >
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="flex items-center gap-6">
+                <div className="p-4 rounded-full bg-[#FFC72C]/10 border border-[#FFC72C]/20">
+                  <Coins className="w-8 h-8 text-[#FFC72C]" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Available Balance</p>
+                  <p className="text-3xl font-black text-white italic tracking-tighter">
+                    {profile?.score || 0} <span className="text-[#FFC72C] text-sm uppercase">pts</span>
+                  </p>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <div className="relative flex-1 md:w-48">
-              <input 
-                type="number" 
-                placeholder="BET AMOUNT"
-                disabled
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none cursor-not-allowed"
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 uppercase italic">pts</span>
-            </div>
-            <button 
-              disabled
-              className="px-8 py-3 bg-[#FFC72C]/30 text-black/40 font-black uppercase italic rounded-xl cursor-not-allowed text-sm flex items-center gap-2 whitespace-nowrap"
-            >
-              <Trophy className="w-4 h-4" />
-              Place Bet
-            </button>
-          </div>
-        </div>
-      </div>
+              <div className="flex-1 max-w-md w-full">
+                 <div className="flex justify-between text-[10px] font-mono text-white/30 uppercase mb-2">
+                    <span>Wager Amount</span>
+                    <span>Potential Payout: ~{calculatePotentialPayout()} pts</span>
+                 </div>
+                 <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                        <input 
+                            type="number"
+                            min="1"
+                            value={betAmount}
+                            onChange={(e) => setBetAmount(Math.max(1, parseInt(e.target.value) || 0))}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#FFC72C]/50 transition-colors"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 uppercase italic">pts</span>
+                    </div>
+                    <button 
+                        onClick={() => setBetAmount(profile?.score || 0)}
+                        className="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95"
+                    >
+                        MAX
+                    </button>
+                 </div>
+                 <div className="flex justify-between mt-2 font-mono text-[10px] text-white/20">
+                    <span>MIN: 1 PTS</span>
+                    <span className="text-[#FFC72C] font-black uppercase italic">Current Bet: {betAmount} PTS</span>
+                 </div>
+              </div>
 
-      {/* Decorative Background Elements */}
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <button 
+                  onClick={() => setSelectedPool(null)}
+                  className="px-6 py-4 bg-white/5 hover:bg-white/10 text-white font-bold uppercase italic rounded-2xl text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handlePlaceBet}
+                  disabled={joinMutation.isPending}
+                  className="px-10 py-4 bg-[#FFC72C] hover:bg-[#FFC72C]/90 text-black font-black uppercase italic rounded-2xl text-sm flex items-center gap-2 whitespace-nowrap transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                >
+                  {joinMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trophy className="w-4 h-4" />
+                  )}
+                  Confirm Wager
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 opacity-30">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#FFC72C]/5 blur-[150px] rounded-full" />
       </div>

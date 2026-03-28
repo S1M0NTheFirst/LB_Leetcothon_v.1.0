@@ -14,6 +14,7 @@ export default function Navbar() {
   const navLinks = [
     { name: "Home", href: "/", icon: Home },
     { name: "Enroll", href: "/enroll", icon: UserPlus },
+  
     { name: "The Arena", href: "/arena", icon: Terminal },
     { name: "Prediction Pool", href: "/pool", icon: Coins },
     { name: "Live Intel", href: "/leaderboard", icon: BarChart2 },

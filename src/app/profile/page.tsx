@@ -2,8 +2,10 @@ import { auth, signIn, signOut } from "@/auth";
 import Link from "next/link";
 import { ArrowLeft, LogOut, LogIn } from "lucide-react";
 import ProfileEditor from "@/components/ProfileEditor";
+import { StreakTracker } from "@/components/StreakTracker";
 import { db, TABLE_NAME } from "@/lib/db";
 import { GetCommand } from "@aws-sdk/lib-dynamodb";
+import LivePointsDisplay from "@/components/LivePointsDisplay";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -49,6 +51,8 @@ export default async function ProfilePage() {
   let user = session.user;
   let points = 0;
   let isEnrolled = false;
+  let streakMap = {};
+  let isIronman = false;
 
   try {
     const { Item } = await db.send(
@@ -60,12 +64,21 @@ export default async function ProfilePage() {
 
     if (Item) {
       user = { ...user, name: Item.name, image: Item.image };
-      points = Item.points ?? 0;
+      points = Item.score ?? Item.points ?? 0;
       isEnrolled = Item.isEnrolled ?? false;
+      streakMap = Item.daily_streak_map ?? {};
+      isIronman = Item.ironman_bonus_awarded ?? false;
     }
   } catch (error) {
     console.error("Failed to fetch user profile:", error);
   }
+
+  // Calculate current stage based on date (PDT)
+  const eventStart = new Date("2026-03-30T00:00:00-07:00");
+  const now = new Date();
+  const diffTime = now.getTime() - eventStart.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const currentStage = diffDays >= 0 && diffDays < 7 ? `day_${diffDays + 1}` : "playground";
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white pt-24 pb-16 px-6 selection:bg-amber-500/30">
@@ -84,20 +97,19 @@ export default async function ProfilePage() {
             <ProfileEditor user={user} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-10">
-              <div className="p-5 rounded-md bg-zinc-950/50 border border-amber-500/20 text-left">
+              <div className="p-5 rounded-md bg-zinc-950/50 border border-amber-500/20 text-left relative overflow-hidden">
                 <p className="text-xs font-mono uppercase tracking-widest text-amber-500 mb-2">Rank</p>
                 <p className="font-semibold text-lg text-zinc-300">Unranked</p>
               </div>
-              <div className="p-5 rounded-md bg-zinc-950/50 border border-amber-500/20 text-left">
-                <p className="text-xs font-mono uppercase tracking-widest text-amber-500 mb-2">Points</p>
-                {isEnrolled ? (
-                  <p className="font-semibold text-2xl text-amber-400">{points}</p>
-                ) : (
-                  <Link href="/enroll" className="font-semibold text-amber-500 hover:text-amber-400 transition-colors animate-pulse hover:animate-none">
-                    Enroll to claim 5 free points &gt;
-                  </Link>
-                )}
-              </div>
+              <LivePointsDisplay initialPoints={points} initialIsEnrolled={isEnrolled} />
+            </div>
+
+            <div className="w-full mt-8 p-6 bg-zinc-950/50 border border-amber-500/20 rounded-xl">
+               <StreakTracker 
+                 streakMap={streakMap} 
+                 currentStage={currentStage}
+                 isIronman={isIronman}
+               />
             </div>
 
             <form

@@ -20,8 +20,9 @@ export async function GET() {
 
     return NextResponse.json({
       ...user,
-      points: user.points || 0,
+      score: user.score || user.points || 0,
       solved_problems: user.solved_problems || [],
+      isEnrolled: user.isEnrolled || false,
     });
   } catch (error) {
     console.error("Error fetching profile:", error);
