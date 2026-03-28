@@ -61,8 +61,8 @@ export default function LockedSection({
 
   if (variant === "overlay") {
     return (
-      <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-[2px] border border-white/5 rounded-[2.5rem] overflow-hidden">
-        <div className="text-center p-8 space-y-6 max-w-lg bg-black/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 shadow-2xl">
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 backdrop-blur-[2px] pointer-events-none">
+        <div className="text-center p-8 space-y-6 max-w-lg bg-black/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 shadow-2xl pointer-events-auto">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
