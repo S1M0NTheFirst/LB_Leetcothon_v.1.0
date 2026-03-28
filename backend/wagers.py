@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 # DynamoDB Setup
 USERS_TABLE = os.getenv("DYNAMODB_TABLE_NAME", "Users")
 POOLS_TABLE = os.getenv("DYNAMODB_POOLS_TABLE", "Pools")
+WAGERS_TABLE = os.getenv("DYNAMODB_WAGERS_TABLE", "Wagers")
+
 
 dynamodb = boto3.resource(
     "dynamodb",
@@ -25,6 +27,8 @@ dynamodb = boto3.resource(
 
 users_table = dynamodb.Table(USERS_TABLE)
 pools_table = dynamodb.Table(POOLS_TABLE)
+wagers_table = dynamodb.Table(WAGERS_TABLE)
+
 
 router = APIRouter(prefix="/api/wagers", tags=["wagers"])
 
@@ -38,6 +42,65 @@ def get_current_pool_id(prediction_type: str):
     # Daily pool based on date
     date_str = current_time.strftime("%Y_%m_%d")
     return f"daily_{date_str}"
+
+def get_active_wager_for_problem(user_email: str) -> Optional[Dict[str, Any]]:
+    try:
+        response = users_table.get_item(Key={"email": user_email})
+        user = response.get("Item")
+        if not user:
+            return None
+        
+        active_wagers = user.get("active_wagers", [])
+        for wager in active_wagers:
+            if wager.get("prediction_type") == "next_problem":
+                return wager
+        return None
+    except Exception as e:
+        logger.error(f"Error getting active wager: {e}")
+        return None
+
+def settle_wager(user_email: str, pool_id: str, amount_bet: Decimal, status: str):
+    try:
+        user_response = users_table.get_item(Key={"email": user_email})
+        user = user_response.get("Item")
+        if not user:
+            raise Exception("User not found for wager settlement")
+
+        active_wagers = user.get("active_wagers", [])
+        wager_to_settle_index = -1
+        for i, wager in enumerate(active_wagers):
+            if wager["pool_id"] == pool_id:
+                wager_to_settle_index = i
+                break
+        
+        if wager_to_settle_index == -1:
+            logger.warning(f"No active wager found for user {user_email} in pool {pool_id}")
+            return
+
+        wager_to_settle = active_wagers.pop(wager_to_settle_index)
+
+        update_expression_parts = ["REMOVE active_wagers[#i]"]
+        expression_attribute_names = {"#i": str(wager_to_settle_index)}
+        expression_attribute_values = {}
+
+        if status == "won":
+            winnings = amount_bet * 2 # 2x payout
+            update_expression_parts.append("SET score = score + :win")
+            expression_attribute_values[":win"] = winnings
+
+        users_table.update_item(
+            Key={"email": user_email},
+            UpdateExpression=", ".join(update_expression_parts),
+            ExpressionAttributeNames=expression_attribute_names,
+            ExpressionAttributeValues=expression_attribute_values
+        )
+
+        wager_to_settle["status"] = status
+        wagers_table.put_item(Item=wager_to_settle)
+
+    except Exception as e:
+        logger.error(f"Error settling wager: {e}")
+
 
 @router.get("/stats")
 async def get_wager_stats(user_email: Optional[str] = None):

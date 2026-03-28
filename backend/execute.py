@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from database import PROBLEMS_DB, LIST_NODE_DEF
 from local_executor import run_local_cpp, run_local_c, run_local_java
 from decimal import Decimal
+from wagers import get_active_wager_for_problem, settle_wager
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -210,26 +211,38 @@ async def execute_with_evaluation(user_code: str, problem_id: str, language_id: 
         return {"error": "Problem not found"}
 
     if language_id == 71: # Python
-        combined_code = f"{COMMON_IMPORTS}\n"
+        combined_code = f"{COMMON_IMPORTS}
+"
         if "ListNode" in user_code and "class ListNode" not in (problem.get('python_driver_code') or ''):
             combined_code += LIST_NODE_DEF
-        combined_code += f"{user_code}\n\n{problem.get('python_driver_code', '')}"
+        combined_code += f"{user_code}
+
+{problem.get('python_driver_code', '')}"
         
         result = await run_with_judge0(combined_code, language_id)
         return process_judge0_result(result, problem, stage)
 
     elif language_id == 54: # C++
-        combined_code = f"{CPP_HEADERS}\n{user_code}\n\n{problem.get('cpp_driver_code', '')}"
+        combined_code = f"{CPP_HEADERS}
+{user_code}
+
+{problem.get('cpp_driver_code', '')}"
         result = run_local_cpp(combined_code)
         return process_local_result(result, problem, stage)
 
     elif language_id == 50: # C
-        combined_code = f"{C_HEADERS}\n{user_code}\n\n{problem.get('c_driver_code', '')}"
+        combined_code = f"{C_HEADERS}
+{user_code}
+
+{problem.get('c_driver_code', '')}"
         result = run_local_c(combined_code)
         return process_local_result(result, problem, stage)
 
     elif language_id == 62: # Java
-        combined_code = f"{JAVA_HEADERS}\n{user_code}\n\n{problem.get('java_driver_code', '')}"
+        combined_code = f"{JAVA_HEADERS}
+{user_code}
+
+{problem.get('java_driver_code', '')}"
         result = run_local_java(combined_code)
         return process_local_result(result, problem, stage)
 
@@ -262,7 +275,8 @@ def process_judge0_result(result, problem, stage):
     elif "FAIL|" in stdout or "ERROR|" in stdout or stderr:
         return {
             "status": {"description": "Wrong Answer", "id": 4},
-            "message": (stdout + "\n" + stderr).strip()
+            "message": (stdout + "
+" + stderr).strip()
         }
     return result
 
@@ -285,7 +299,9 @@ def process_local_result(result, problem, stage):
              description = "Wrong Answer"
         return {
             "status": {"description": description, "id": result["status"]["id"]},
-            "message": (stdout + "\n" + stderr + "\n" + (result.get("compile_output") or "")).strip()
+            "message": (stdout + "
+" + stderr + "
+" + (result.get("compile_output") or "")).strip()
         }
     return result
 
@@ -310,7 +326,8 @@ async def run_code(request: RunRequest):
         return await execute_with_evaluation(request.code, request.problem_id, request.language_id)
     
     payload = {
-        "source_code": f"{COMMON_IMPORTS}\n{request.code}",
+        "source_code": f"{COMMON_IMPORTS}
+{request.code}",
         "language_id": request.language_id,
         "stdin": ""
     }
@@ -321,6 +338,9 @@ async def run_code(request: RunRequest):
 @router.post("/submit")
 async def submit_code(request: SubmitRequest):
     try:
+        # Check for active wager before execution
+        active_wager = get_active_wager_for_problem(request.user_email)
+
         result = await execute_with_evaluation(request.code, request.problem_id, request.language_id)
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
@@ -339,6 +359,14 @@ async def submit_code(request: SubmitRequest):
             new_score, points_awarded, is_optimized, ironman_awarded = await award_points(
                 request.user_email, request.problem_id, difficulty, stage, runtime, memory
             )
+
+            if active_wager:
+                settle_wager(request.user_email, active_wager["pool_id"], active_wager["amount_bet"], "won")
+
+        else: # Submission was not accepted
+            if active_wager:
+                settle_wager(request.user_email, active_wager["pool_id"], active_wager["amount_bet"], "lost")
+
             
         result["points_awarded"] = points_awarded
         result["new_score"] = new_score
