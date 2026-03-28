@@ -5,6 +5,7 @@ import ProfileEditor from "@/components/ProfileEditor";
 import { StreakTracker } from "@/components/StreakTracker";
 import { db, TABLE_NAME } from "@/lib/db";
 import { GetCommand } from "@aws-sdk/lib-dynamodb";
+import LivePointsDisplay from "@/components/LivePointsDisplay";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -100,16 +101,7 @@ export default async function ProfilePage() {
                 <p className="text-xs font-mono uppercase tracking-widest text-amber-500 mb-2">Rank</p>
                 <p className="font-semibold text-lg text-zinc-300">Unranked</p>
               </div>
-              <div className="p-5 rounded-md bg-zinc-950/50 border border-amber-500/20 text-left">
-                <p className="text-xs font-mono uppercase tracking-widest text-amber-500 mb-2">Total Score</p>
-                {isEnrolled ? (
-                  <p className="font-black text-3xl text-amber-400 italic tracking-tighter">{points}</p>
-                ) : (
-                  <Link href="/enroll" className="font-semibold text-amber-500 hover:text-amber-400 transition-colors animate-pulse hover:animate-none text-sm">
-                    Enroll to claim 5 free points &gt;
-                  </Link>
-                )}
-              </div>
+              <LivePointsDisplay initialPoints={points} initialIsEnrolled={isEnrolled} />
             </div>
 
             <div className="w-full mt-8 p-6 bg-zinc-950/50 border border-amber-500/20 rounded-xl">
