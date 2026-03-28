@@ -109,8 +109,11 @@ async def get_leaderboard():
                 "score": int(u.get("score", 0)),
                 "solved_count": len(u.get("solved_problems", [])),
                 "streak_map": u.get("daily_streak_map", {}),
-                "is_ironman": u.get("ironman_bonus_awarded", False)
+                "is_ironman": u.get("ironman_bonus_awarded", False),
+                "created_at": u.get("createdAt"),
+                "last_login": u.get("lastLogin")
             })
+        # Default sort by score, but frontend can re-sort
         leaderboard.sort(key=lambda x: x["score"], reverse=True)
         return leaderboard
     except Exception as e:
