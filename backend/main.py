@@ -1,4 +1,5 @@
 import os
+import sys
 import uvicorn
 import logging
 import random
@@ -10,6 +11,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 from dotenv import load_dotenv
+
+# Add the current directory to sys.path to allow local imports
+sys.path.append(os.path.dirname(__file__))
+
 from database import PROBLEMS_DB, DAY_TOPICS
 from execute import router as execute_router
 from wagers import router as wagers_router

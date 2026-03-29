@@ -91,6 +91,20 @@ class SubmitRequest(BaseModel):
     language_id: int
     user_email: str
 
+def get_current_event_stage():
+    current_time = datetime.now(PT_TZ)
+    # This logic should match main.py
+    event_start = datetime(2026, 3, 30, 0, 0, 0, tzinfo=PT_TZ)
+    event_end = datetime(2026, 4, 5, 23, 59, 59, tzinfo=PT_TZ)
+    
+    if current_time < event_start:
+        return "playground"
+    if current_time > event_end:
+        return "event_over"
+        
+    days_passed = (current_time - event_start).days
+    return f"day_{days_passed + 1}"
+
 def get_problem_by_id(problem_id: str):
     event_stage = get_current_event_stage()
     
@@ -211,38 +225,26 @@ async def execute_with_evaluation(user_code: str, problem_id: str, language_id: 
         return {"error": "Problem not found"}
 
     if language_id == 71: # Python
-        combined_code = f"{COMMON_IMPORTS}
-"
+        combined_code = f"{COMMON_IMPORTS}\n"
         if "ListNode" in user_code and "class ListNode" not in (problem.get('python_driver_code') or ''):
             combined_code += LIST_NODE_DEF
-        combined_code += f"{user_code}
-
-{problem.get('python_driver_code', '')}"
+        combined_code += f"{user_code}\n\n{problem.get('python_driver_code', '')}"
         
         result = await run_with_judge0(combined_code, language_id)
         return process_judge0_result(result, problem, stage)
 
     elif language_id == 54: # C++
-        combined_code = f"{CPP_HEADERS}
-{user_code}
-
-{problem.get('cpp_driver_code', '')}"
+        combined_code = f"{CPP_HEADERS}\n{user_code}\n\n{problem.get('cpp_driver_code', '')}"
         result = run_local_cpp(combined_code)
         return process_local_result(result, problem, stage)
 
     elif language_id == 50: # C
-        combined_code = f"{C_HEADERS}
-{user_code}
-
-{problem.get('c_driver_code', '')}"
+        combined_code = f"{C_HEADERS}\n{user_code}\n\n{problem.get('c_driver_code', '')}"
         result = run_local_c(combined_code)
         return process_local_result(result, problem, stage)
 
     elif language_id == 62: # Java
-        combined_code = f"{JAVA_HEADERS}
-{user_code}
-
-{problem.get('java_driver_code', '')}"
+        combined_code = f"{JAVA_HEADERS}\n{user_code}\n\n{problem.get('java_driver_code', '')}"
         result = run_local_java(combined_code)
         return process_local_result(result, problem, stage)
 
@@ -275,8 +277,7 @@ def process_judge0_result(result, problem, stage):
     elif "FAIL|" in stdout or "ERROR|" in stdout or stderr:
         return {
             "status": {"description": "Wrong Answer", "id": 4},
-            "message": (stdout + "
-" + stderr).strip()
+            "message": (stdout + "\n" + stderr).strip()
         }
     return result
 
@@ -299,9 +300,7 @@ def process_local_result(result, problem, stage):
              description = "Wrong Answer"
         return {
             "status": {"description": description, "id": result["status"]["id"]},
-            "message": (stdout + "
-" + stderr + "
-" + (result.get("compile_output") or "")).strip()
+            "message": (stdout + "\n" + stderr + "\n" + (result.get("compile_output") or "")).strip()
         }
     return result
 
@@ -326,8 +325,7 @@ async def run_code(request: RunRequest):
         return await execute_with_evaluation(request.code, request.problem_id, request.language_id)
     
     payload = {
-        "source_code": f"{COMMON_IMPORTS}
-{request.code}",
+        "source_code": f"{COMMON_IMPORTS}\n{request.code}",
         "language_id": request.language_id,
         "stdin": ""
     }

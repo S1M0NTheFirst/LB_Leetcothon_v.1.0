@@ -41,6 +41,7 @@ export default function ProblemSolvingPage() {
   const [activeCase, setActiveCase] = useState(0);
   const [showToast, setShowToast] = useState(false);
   const [toastPoints, setToastPoints] = useState(0);
+  const [toastType, setToastType] = useState<'success' | 'violation'>('success');
   const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null);
 
   // Fetch User Profile
@@ -114,6 +115,19 @@ export default function ProblemSolvingPage() {
     }
   };
 
+  const handleEditorMount = (editor: any) => {
+    editor.onDidPaste((e: any) => {
+      // Immediately undo the paste
+      editor.trigger('keyboard', 'undo', null);
+      
+      // Notify user
+      setToastPoints(0);
+      setToastType('violation');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    });
+  };
+
   const runCodeMutation = useMutation({
     mutationFn: async (payload: any) => {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -151,6 +165,7 @@ export default function ProblemSolvingPage() {
       
       if (data.points_awarded) {
         setToastPoints(data.awarded_amount);
+        setToastType('success');
         setShowToast(true);
         setTimeout(() => setShowToast(false), 5000);
       }
@@ -345,6 +360,7 @@ export default function ProblemSolvingPage() {
                     language={selectedLanguage.editorLang}
                     value={code}
                     onChange={handleEditorChange}
+                    onMount={handleEditorMount}
                     options={{
                       fontSize: 14,
                       minimap: { enabled: false },
@@ -374,7 +390,7 @@ export default function ProblemSolvingPage() {
                     <button 
                       onClick={handleSubmit}
                       disabled={isPending}
-                      className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-[#FFC72C] hover:bg-[#FFC72C]/90 text-black text-xs font-black transition-all disabled:opacity-50 active:scale-95 shadow-[0_0_15px_rgba(255,199,44,0.1)]"
+                      className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-[#FFC72C] hover:bg-[#FFC72C]/90 text-black text-xs font-black transition-all disabled:opacity-50 active:scale-95 shadow-[0_0_15px_rgba(234,179,8,0.1)]"
                     >
                       {submitCodeMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin text-black" /> : <Send className="w-3 h-3 fill-current" />}
                       Submit
@@ -613,14 +629,22 @@ export default function ProblemSolvingPage() {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-[#FFC72C] text-black px-8 py-4 rounded-2xl shadow-[0_0_50px_rgba(255,199,44,0.3)] flex items-center gap-4 border-2 border-white/20"
+            className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border-2 ${
+              toastType === 'violation' 
+                ? 'bg-red-500 text-white border-white/20 shadow-red-500/30' 
+                : 'bg-[#FFC72C] text-black border-white/20 shadow-[0_0_50px_rgba(255,199,44,0.3)]'
+            }`}
           >
-            <div className="bg-black/10 p-2 rounded-full">
-              <Trophy className="w-6 h-6" />
+            <div className={`${toastType === 'violation' ? 'bg-black/20' : 'bg-black/10'} p-2 rounded-full`}>
+              {toastType === 'violation' ? <AlertTriangle className="w-6 h-6" /> : <Trophy className="w-6 h-6" />}
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Objective Secured</p>
-              <p className="text-xl font-black italic tracking-tighter">+{toastPoints} XP EARNED</p>
+              <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${toastType === 'violation' ? 'text-white/80' : 'opacity-60'}`}>
+                {toastType === 'violation' ? 'SECURITY ALERT' : 'Objective Secured'}
+              </p>
+              <p className="text-xl font-black italic tracking-tighter">
+                {toastType === 'violation' ? 'PASTE PROTOCOL VIOLATION' : `+${toastPoints} XP EARNED`}
+              </p>
             </div>
           </motion.div>
         )}
