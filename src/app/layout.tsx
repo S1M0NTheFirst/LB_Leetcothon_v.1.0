@@ -18,12 +18,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-function ConditionalFooter() {
-  const pathname = usePathname();
-  if (pathname !== "/") return null;
-  return <Footer />;
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,7 +33,7 @@ export default function RootLayout({
           <div className="pt-16 min-h-screen">
             {children}
           </div>
-          <ConditionalFooter />
+          <Footer />
         </Providers>
       </body>
     </html>

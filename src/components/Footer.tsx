@@ -1,6 +1,6 @@
 "use client";
 
-import { Github, MessageCircle, UserPlus, Zap } from "lucide-react";
+import { Github, MessageCircle, UserPlus, Zap, Linkedin } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -30,6 +30,10 @@ export default function Footer() {
           <Link href="https://discord.gg/42jFb86RCq" target="_blank" className="hover:text-amber-400 transition-colors">
             Discord Community
           </Link>
+          <span className="text-zinc-800">•</span>
+          <Link href="https://www.linkedin.com/in/simon-zhang-b83580315/" target="_blank" className="hover:text-amber-400 transition-colors">
+            LinkedIn
+          </Link>
         </div>
 
         {/* Section 2: Social Icons */}
@@ -39,6 +43,9 @@ export default function Footer() {
           </Link>
           <Link href="https://discord.gg/42jFb86RCq" target="_blank">
             <MessageCircle className="w-6 h-6 text-zinc-500 hover:text-amber-500 hover:scale-110 transition-all cursor-pointer" />
+          </Link>
+          <Link href="https://www.linkedin.com/in/simon-zhang-b83580315/" target="_blank">
+            <Linkedin className="w-6 h-6 text-zinc-500 hover:text-amber-500 hover:scale-110 transition-all cursor-pointer" />
           </Link>
         </div>
 
