@@ -53,8 +53,8 @@ app.add_middleware(
 )
 
 PT_TZ = pytz.timezone("America/Los_Angeles")
-EVENT_START_DATE = datetime(2026, 3, 30, 0, 0, 0, tzinfo=PT_TZ)
-EVENT_END_DATE = datetime(2026, 4, 5, 20, 0, 0, tzinfo=PT_TZ)
+EVENT_START_DATE = PT_TZ.localize(datetime(2026, 3, 30, 0, 0, 0))
+EVENT_END_DATE = PT_TZ.localize(datetime(2026, 4, 5, 20, 0, 0))
 
 # DynamoDB Setup
 dynamodb = boto3.resource(
