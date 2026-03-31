@@ -280,23 +280,69 @@ async def execute_with_evaluation(user_code: str, problem_id: str, language_id: 
     elif language_id == 54: # C++
         driver_code = problem.get('cpp_driver_code', '')
         
-        # Auto-generate driver if missing and matches string->bool pattern
+        # Auto-generate driver if missing
         if not driver_code:
             starter = problem.get('starter_code', {}).get('cpp', '')
             import re
-            match = re.search(r'bool\s+(\w+)\s*\(\s*string', starter)
+            
+            # Pattern: type methodName(type1 arg1, type2 arg2, ...)
+            match = re.search(r'(\w+|<[\w\s,<>]+>)\s+(\w+)\s*\(([^)]*)\)', starter)
             if match:
-                method_name = match.group(1)
+                ret_type = match.group(1).strip()
+                method_name = match.group(2).strip()
+                args_raw = match.group(3).strip()
+                
+                # Parse args to get types and count
+                arg_pairs = [a.strip() for a in args_raw.split(',') if a.strip()]
+                arg_types = []
+                for ap in arg_pairs:
+                    # simplistic type extraction: remove variable name (last word)
+                    # and clean up const, &, etc.
+                    parts = ap.rsplit(' ', 1)
+                    at = parts[0].strip()
+                    clean_at = at.replace('const', '').replace('&', '').strip()
+                    arg_types.append(clean_at)
+                
+                arg_parsers = []
+                arg_calls = []
+                for i, at in enumerate(arg_types):
+                    if at == 'string':
+                        arg_parsers.append(f"string arg{i} = argv[{i+1}];")
+                    elif at == 'int':
+                        arg_parsers.append(f"int arg{i} = stoi(argv[{i+1}]);")
+                    elif at == 'long' or at == 'long long':
+                        arg_parsers.append(f"long long arg{i} = stoll(argv[{i+1}]);")
+                    elif at == 'vector<int>':
+                        arg_parsers.append(f"vector<int> arg{i} = parseVectorInt(argv[{i+1}]);")
+                    elif at == 'vector<string>':
+                        arg_parsers.append(f"vector<string> arg{i} = parseVectorString(argv[{i+1}]);")
+                    elif at == 'bool':
+                        arg_parsers.append(f"bool arg{i} = (string(argv[{i+1}]) == \"true\");")
+                    else:
+                        # Fallback for unknown types
+                        arg_parsers.append(f"{at} arg{i}; // Manual parsing needed for {at}")
+                    arg_calls.append(f"arg{i}")
+                
+                parsers_str = "\n    ".join(arg_parsers)
+                calls_str = ", ".join(arg_calls)
+                
+                # Result printer
+                if ret_type == 'bool':
+                    printer = 'cout << (result ? "true" : "false") << endl;'
+                elif 'vector' in ret_type:
+                    printer = 'cout << "["; for(int i=0; i<result.size(); ++i) cout << (i>0?",":"") << result[i]; cout << "]" << endl;'
+                else:
+                    printer = 'cout << result << endl;'
+
                 driver_code = f"""
 int main(int argc, char* argv[]) {{
-    if (argc < 2) {{
-        cout << "false" << endl;
+    if (argc < {len(arg_types) + 1}) {{
         return 1;
     }}
-    string s = argv[1];
+    {parsers_str}
     Solution obj;
-    bool result = obj.{method_name}(s);
-    cout << (result ? "true" : "false") << endl;
+    {ret_type} result = obj.{method_name}({calls_str});
+    {printer}
     return 0;
 }}
 """
@@ -318,21 +364,44 @@ int main(int argc, char* argv[]) {{
             all_passed = True
             test_outputs = []
             for i, tc in enumerate(problem.get('public_test_cases', [])):
-                # Extract input value from "s = \"...\""
+                # Parse inputs from LeetCode style: "nums = [2,7,11,15], target = 9"
                 input_raw = tc['input']
-                if ' = ' in input_raw:
-                    input_val = input_raw.split(' = ', 1)[1]
-                    if input_val.startswith('"') and input_val.endswith('"'):
-                        input_val = input_val[1:-1]
-                else:
-                    input_val = input_raw
+                # Split by comma that is NOT inside brackets
+                parts = []
+                bracket_level = 0
+                current = ""
+                for char in input_raw:
+                    if char == '[': bracket_level += 1
+                    elif char == ']': bracket_level -= 1
+                    
+                    if char == ',' and bracket_level == 0:
+                        parts.append(current.strip())
+                        current = ""
+                    else:
+                        current += char
+                if current:
+                    parts.append(current.strip())
                 
-                res = run_local_cpp(combined_code, [input_val])
+                arg_values = []
+                for p in parts:
+                    if ' = ' in p:
+                        val = p.split(' = ', 1)[1]
+                        # Remove quotes if it's a string
+                        if val.startswith('"') and val.endswith('"'):
+                            val = val[1:-1]
+                        arg_values.append(val)
+                    else:
+                        arg_values.append(p)
+                
+                res = run_local_cpp(combined_code, arg_values)
                 if res['status']['id'] != 3:
                     return process_local_result(res, problem, stage)
                 
                 actual = res['stdout'].strip().lower()
                 expected = tc['expected'].strip().lower()
+                # Normalize expected/actual for comparison (remove spaces, handle boolean strings)
+                actual = actual.replace(" ", "")
+                expected = expected.replace(" ", "")
                 
                 if actual != expected:
                     all_passed = False
