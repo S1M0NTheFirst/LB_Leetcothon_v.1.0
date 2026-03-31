@@ -17,3 +17,7 @@ class Pool(BaseModel):
     total_pot: int
     participant_ids: List[str] # Emails
     status: str = "open" # "open" | "resolved"
+
+class HeartbeatRequest(BaseModel):
+    user_email: str
+    interval_ms: int

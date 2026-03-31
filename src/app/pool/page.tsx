@@ -79,7 +79,7 @@ export default function PredictionPoolPage() {
 
   const handlePlaceBet = () => {
     if (!selectedPool) return;
-    if (betAmount > (profile?.score || 0)) {
+    if (betAmount > (profile?.points || 0)) {
         alert("Insufficient points!");
         return;
     }
@@ -126,9 +126,6 @@ export default function PredictionPoolPage() {
   return (
     <div className="min-h-screen bg-[#111111] text-white selection:bg-[#FFC72C] selection:text-black relative overflow-hidden">
       
-      {/* LOCKED OVERLAY */}
-      <LockedSection title="Prediction Pool" variant="overlay" />
-
       <div className="max-w-7xl mx-auto px-6 py-12 pb-48">
         
         {/* Header Section - Dual Pools */}
@@ -332,7 +329,7 @@ export default function PredictionPoolPage() {
                 <div>
                   <p className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Available Balance</p>
                   <p className="text-3xl font-black text-white italic tracking-tighter">
-                    {profile?.score || 0} <span className="text-[#FFC72C] text-sm uppercase">pts</span>
+                    {profile?.points || 0} <span className="text-[#FFC72C] text-sm uppercase">pts</span>
                   </p>
                 </div>
               </div>
@@ -354,7 +351,7 @@ export default function PredictionPoolPage() {
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 uppercase italic">pts</span>
                     </div>
                     <button 
-                        onClick={() => setBetAmount(profile?.score || 0)}
+                        onClick={() => setBetAmount(profile?.points || 0)}
                         className="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95"
                     >
                         MAX

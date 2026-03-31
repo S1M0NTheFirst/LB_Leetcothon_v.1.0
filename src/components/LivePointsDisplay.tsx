@@ -18,10 +18,10 @@ export default function LivePointsDisplay({ initialPoints, initialIsEnrolled }: 
     },
     refetchOnWindowFocus: true,
     staleTime: 0,
-    initialData: { score: initialPoints, isEnrolled: initialIsEnrolled },
+    initialData: { points: initialPoints, isEnrolled: initialIsEnrolled },
   });
 
-  const points = data?.score ?? initialPoints;
+  const points = data?.points ?? initialPoints;
   const isEnrolled = data?.isEnrolled ?? initialIsEnrolled;
 
   return (

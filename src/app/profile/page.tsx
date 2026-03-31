@@ -64,7 +64,7 @@ export default async function ProfilePage() {
 
     if (Item) {
       user = { ...user, name: Item.name, image: Item.image };
-      points = Item.score ?? Item.points ?? 0;
+      points = Item.points ?? 0;
       isEnrolled = Item.isEnrolled ?? false;
       streakMap = Item.daily_streak_map ?? {};
       isIronman = Item.ironman_bonus_awarded ?? false;

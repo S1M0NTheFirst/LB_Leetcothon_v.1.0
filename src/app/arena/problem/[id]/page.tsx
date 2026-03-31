@@ -246,7 +246,7 @@ export default function ProblemSolvingPage() {
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
             <Trophy className="w-3 h-3 text-[#FFC72C]" />
-            <span className="text-[10px] font-mono font-bold text-white/60">{profile?.score || 0} pts</span>
+            <span className="text-[10px] font-mono font-bold text-white/60">{profile?.points || 0} pts</span>
           </div>
           {isSolved && (
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">

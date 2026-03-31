@@ -20,6 +20,7 @@ from execute import router as execute_router
 from wagers import router as wagers_router
 from connection_manager import manager
 from fastapi import WebSocket, WebSocketDisconnect
+from models import HeartbeatRequest
 import boto3
 
 # Setup logging
@@ -53,8 +54,9 @@ app.add_middleware(
 )
 
 PT_TZ = pytz.timezone("America/Los_Angeles")
+# Use localize for safer timezone handling with pytz
 EVENT_START_DATE = PT_TZ.localize(datetime(2026, 3, 30, 0, 0, 0))
-EVENT_END_DATE = PT_TZ.localize(datetime(2026, 4, 5, 20, 0, 0))
+EVENT_END_DATE = PT_TZ.localize(datetime(2026, 4, 5, 23, 59, 59))
 
 # DynamoDB Setup
 dynamodb = boto3.resource(
@@ -71,23 +73,27 @@ def get_current_stage():
         return "playground"
     if current_time > EVENT_END_DATE:
         return "event_over"
-    date_to_stage = {
-        (EVENT_START_DATE + timedelta(days=i)).date(): f"day_{i+1}"
-        for i in range(7)
-    }
-    stage = date_to_stage.get(current_time.date(), "playground")
+    
+    # Calculate day based on difference from start date
+    days_passed = (current_time - EVENT_START_DATE).days
+    stage = f"day_{days_passed + 1}"
     return stage
 
 # Helper to check if a stage is past or current
 def is_stage_accessible(stage: str):
     if stage == "playground":
         return True
+    
     current_stage = get_current_stage()
     if current_stage == "event_over":
         return True
+    if current_stage == "playground":
+        return stage == "playground"
+        
     stages_order = ["day_1", "day_2", "day_3", "day_4", "day_5", "day_6", "day_7"]
     if stage not in stages_order:
         return False
+        
     current_idx = stages_order.index(current_stage)
     stage_idx = stages_order.index(stage)
     return stage_idx <= current_idx
@@ -107,22 +113,62 @@ async def get_leaderboard():
         users = response.get("Items", [])
         leaderboard = []
         for u in users:
+            # Eradicate 'score', strictly use 'points'
+            user_points = int(u.get("points", 0))
+            daily_time_map = u.get("daily_time_map", {})
+            total_time_spent = sum(daily_time_map.values()) if daily_time_map else 0
+            
             leaderboard.append({
                 "email": u.get("email"),
                 "name": u.get("name", "Anonymous"),
                 "image": u.get("image"),
-                "score": int(u.get("score", 0)),
+                "points": user_points,
                 "solved_count": len(u.get("solved_problems", [])),
                 "streak_map": u.get("daily_streak_map", {}),
                 "is_ironman": u.get("ironman_bonus_awarded", False),
                 "created_at": u.get("createdAt"),
-                "last_login": u.get("lastLogin")
+                "last_login": u.get("lastLogin"),
+                "total_time_spent": total_time_spent
             })
-        # Default sort by score, but frontend can re-sort
-        leaderboard.sort(key=lambda x: x["score"], reverse=True)
+        # Primary ranking category strictly sorts users by points (descending order)
+        leaderboard.sort(key=lambda x: x["points"], reverse=True)
         return leaderboard
     except Exception as e:
         logger.error(f"Leaderboard Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/user/heartbeat")
+async def user_heartbeat(request: HeartbeatRequest):
+    try:
+        users_table = dynamodb.Table(os.getenv("DYNAMODB_TABLE_NAME", "Users"))
+        current_time_pt = datetime.now(PT_TZ)
+        today_str = current_time_pt.strftime("%Y-%m-%d")
+        
+        res = users_table.get_item(Key={"email": request.user_email})
+        user = res.get("Item")
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        daily_time_map = user.get("daily_time_map", {})
+        current_daily_time = int(daily_time_map.get(today_str, 0))
+        
+        # Cap at 24 hours (86,400,000 ms)
+        MAX_DAILY_MS = 24 * 60 * 60 * 1000
+        new_daily_time = min(MAX_DAILY_MS, current_daily_time + request.interval_ms)
+        
+        daily_time_map[today_str] = new_daily_time
+        
+        users_table.update_item(
+            Key={"email": request.user_email},
+            UpdateExpression="SET daily_time_map = :m, last_heartbeat = :t",
+            ExpressionAttributeValues={
+                ":m": daily_time_map,
+                ":t": current_time_pt.isoformat()
+            }
+        )
+        return {"success": True, "today_time_ms": new_daily_time}
+    except Exception as e:
+        logger.error(f"Heartbeat Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/problems/daily")

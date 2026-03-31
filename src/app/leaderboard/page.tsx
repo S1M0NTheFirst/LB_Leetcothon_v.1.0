@@ -29,15 +29,16 @@ interface LeaderboardUser {
   email: string;
   name: string;
   image?: string;
-  score: number;
+  points: number;
   solved_count: number;
   streak_map: Record<string, boolean>;
   is_ironman: boolean;
   created_at?: string;
   last_login?: string;
+  total_time_spent?: number;
 }
 
-type SortCategory = "score" | "solved" | "persistence";
+type SortCategory = "points" | "solved" | "persistence";
 
 const RankIcon = ({ rank }: { rank: number }) => {
   if (rank === 1) return <Crown className="w-6 h-6 text-yellow-500 fill-yellow-500/20" />;
@@ -49,14 +50,14 @@ const RankIcon = ({ rank }: { rank: number }) => {
 export default function LeaderboardPage() {
   const [countdown, setCountdown] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<SortCategory>("score");
+  const [activeTab, setActiveTab] = useState<SortCategory>("points");
   const [syncTime, setSyncTime] = useState<string>("");
-  const [isEventLive, setIsEventLive] = useState(false);
 
   const { data: leaderboard, isLoading } = useQuery<LeaderboardUser[]>({
     queryKey: ["leaderboard"],
     queryFn: async () => {
-      const res = await fetch("/api/leaderboard");
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      const res = await fetch(`${baseUrl}/api/leaderboard`);
       if (!res.ok) throw new Error("Failed to fetch leaderboard");
       return res.json();
     },
@@ -71,7 +72,6 @@ export default function LeaderboardPage() {
       const distance = targetDate - now;
       if (distance < 0) {
         setCountdown("EVENT LIVE");
-        setIsEventLive(true);
         return;
       }
       const days = Math.floor(distance / (1000 * 60 * 60 * 24));
@@ -86,12 +86,7 @@ export default function LeaderboardPage() {
   }, []);
 
   const getPersistenceScore = (user: LeaderboardUser) => {
-    if (!user.created_at) return 0;
-    const start = new Date(user.created_at).getTime();
-    if (isNaN(start)) return 0;
-    const end = user.last_login ? new Date(user.last_login).getTime() : new Date().getTime();
-    const duration = isNaN(end) ? (new Date().getTime() - start) : (end - start);
-    return Math.max(0, duration);
+    return user.total_time_spent || 0;
   };
 
   const formatPersistence = (ms: number) => {
@@ -105,8 +100,8 @@ export default function LeaderboardPage() {
     
     let base = [...leaderboard];
     
-    if (activeTab === "score") {
-        base.sort((a, b) => (b.score || 0) - (a.score || 0));
+    if (activeTab === "points") {
+        base.sort((a, b) => (b.points || 0) - (a.points || 0));
     } else if (activeTab === "solved") {
         base.sort((a, b) => (b.solved_count || 0) - (a.solved_count || 0));
     } else if (activeTab === "persistence") {
@@ -126,13 +121,15 @@ export default function LeaderboardPage() {
 
   // Calculate current stage for streak highlights
   const eventStart = new Date("2026-03-30T00:00:00-07:00");
+  const eventEnd = new Date("2026-04-05T23:59:59-07:00");
   const now = new Date();
+  const isEventLive = now >= eventStart && now <= eventEnd;
   const diffTime = now.getTime() - eventStart.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   const currentStage = diffDays >= 0 && diffDays < 7 ? `day_${diffDays + 1}` : "playground";
 
   const categories: {id: SortCategory, label: string, icon: any}[] = [
-    { id: "score", label: "Most Credits", icon: Zap },
+    { id: "points", label: "Most Credits", icon: Zap },
     { id: "solved", label: "Most Solved", icon: Award },
     { id: "persistence", label: "Stay Longest", icon: Activity }
   ];
@@ -272,11 +269,11 @@ export default function LeaderboardPage() {
                       <div className="bg-black/40 rounded-2xl p-4 border border-white/5">
                         <div className="flex justify-between items-end mb-1">
                           <span className="text-[10px] font-mono text-white/30 uppercase tracking-widest">
-                            {activeTab === "score" ? "Active Score" : activeTab === "solved" ? "Solved Count" : "Time Spent"}
+                            {activeTab === "points" ? "Active Points" : activeTab === "solved" ? "Solved Count" : "Time Spent"}
                           </span>
                           <span className={`text-3xl font-black italic ${idx === 0 ? "text-yellow-500" : "text-white"}`}>
-                            {activeTab === "score" 
-                                ? (user.score || 0).toLocaleString() 
+                            {activeTab === "points" 
+                                ? (user.points || 0).toLocaleString() 
                                 : activeTab === "solved" 
                                     ? (user.solved_count || 0) 
                                     : formatPersistence(getPersistenceScore(user))}
@@ -295,10 +292,10 @@ export default function LeaderboardPage() {
                       <div className="flex items-center justify-between">
                          <div>
                             <p className="text-[10px] font-mono text-white/30 uppercase mb-1">
-                                {activeTab === "score" ? "Solved" : "Credits"}
+                                {activeTab === "points" ? "Solved" : "Credits"}
                             </p>
                             <p className="text-xl font-black text-white italic">
-                                {activeTab === "score" ? (user.solved_count || 0) : (user.score || 0).toLocaleString()}
+                                {activeTab === "points" ? (user.solved_count || 0) : (user.points || 0).toLocaleString()}
                             </p>
                          </div>
                          <div className="text-right">
@@ -358,10 +355,10 @@ export default function LeaderboardPage() {
                       <th className="px-6 py-6 font-medium">Operative</th>
                       <th className="px-6 py-6 font-medium hidden lg:table-cell">Intel Streak</th>
                       <th className="px-6 py-6 font-medium text-right">
-                        {activeTab === "score" ? "Solved" : activeTab === "solved" ? "Credits" : "Joined"}
+                        {activeTab === "points" ? "Solved" : activeTab === "solved" ? "Credits" : "Joined"}
                       </th>
                       <th className="px-10 py-6 font-medium text-right">
-                        {activeTab === "score" ? "Credits" : activeTab === "solved" ? "Solved" : "Stay"}
+                        {activeTab === "points" ? "Credits" : activeTab === "solved" ? "Solved" : "Stay"}
                       </th>
                     </tr>
                   </thead>
@@ -409,17 +406,17 @@ export default function LeaderboardPage() {
                           </td>
                           <td className="px-6 py-8 text-right">
                             <p className="text-xl font-black italic text-white/80">
-                                {activeTab === "score" 
+                                {activeTab === "points" 
                                     ? (user.solved_count || 0) 
                                     : activeTab === "solved" 
-                                        ? (user.score || 0).toLocaleString() 
+                                        ? (user.points || 0).toLocaleString() 
                                         : user.created_at ? new Date(user.created_at).toLocaleDateString() : "---"}
                             </p>
                           </td>
                           <td className="px-10 py-8 text-right">
                             <p className="text-2xl font-black italic tracking-tighter text-yellow-500/80 group-hover:text-yellow-500 transition-colors">
-                                {activeTab === "score" 
-                                    ? (user.score || 0).toLocaleString() 
+                                {activeTab === "points" 
+                                    ? (user.points || 0).toLocaleString() 
                                     : activeTab === "solved" 
                                         ? (user.solved_count || 0) 
                                         : formatPersistence(getPersistenceScore(user))}

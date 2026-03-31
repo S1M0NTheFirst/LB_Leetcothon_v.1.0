@@ -6,6 +6,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import Heartbeat from "@/components/Heartbeat";
 import { usePathname } from "next/navigation";
 
 const geistSans = Geist({
@@ -29,6 +30,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
+          <Heartbeat />
           <Navbar />
           <div className="pt-16 min-h-screen">
             {children}

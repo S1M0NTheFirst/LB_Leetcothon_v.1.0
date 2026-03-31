@@ -9,33 +9,41 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from models import JoinWagerRequest, Wager, Pool
 from decimal import Decimal
+from dotenv import load_dotenv
 
 from database import PROBLEMS_DB
 
 logger = logging.getLogger(__name__)
 
+# Load .env variables
+env_path = os.path.join(os.path.dirname(__file__), "..", ".env.local")
+load_dotenv(env_path)
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
 # DynamoDB Setup
 USERS_TABLE = os.getenv("DYNAMODB_TABLE_NAME", "Users")
-POOLS_TABLE = os.getenv("DYNAMODB_POOLS_TABLE", "Pools")
-WAGERS_TABLE = os.getenv("DYNAMODB_WAGERS_TABLE", "Wagers")
+# If DYNAMODB_TABLE_NAME contains a prefix (e.g. "leetcothon-Users"), 
+# try to apply same prefix to Pools and Wagers if they aren't explicitly set.
+prefix = ""
+if "-" in USERS_TABLE and USERS_TABLE != "Users":
+    # If table is e.g. "lb-leetcothon-Users", prefix is "lb-leetcothon-"
+    prefix = USERS_TABLE.rsplit("-", 1)[0] + "-"
 
+POOLS_TABLE = os.getenv("DYNAMODB_POOLS_TABLE", f"{prefix}Pools")
+WAGERS_TABLE = os.getenv("DYNAMODB_WAGERS_TABLE", f"{prefix}Wagers")
 
-dynamodb = boto3.resource(
-    "dynamodb",
-    region_name=os.getenv("AWS_REGION", "us-east-1"),
-    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
-)
-
-users_table = dynamodb.Table(USERS_TABLE)
-pools_table = dynamodb.Table(POOLS_TABLE)
-wagers_table = dynamodb.Table(WAGERS_TABLE)
-
+def get_dynamodb_resource():
+    return boto3.resource(
+        "dynamodb",
+        region_name=os.getenv("AWS_REGION", "us-east-1"),
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
+    )
 
 router = APIRouter(prefix="/api/wagers", tags=["wagers"])
 
 PT_TZ = pytz.timezone("America/Los_Angeles")
-EVENT_START_DATE = datetime(2026, 3, 30, 0, 0, 0, tzinfo=PT_TZ)
+EVENT_START_DATE = PT_TZ.localize(datetime(2026, 3, 30, 0, 0, 0))
 
 def get_current_pool_id(prediction_type: str):
     current_time = datetime.now(PT_TZ)
@@ -57,6 +65,8 @@ def get_problem_ids_for_day(day_stage: str):
 
 def get_active_wager_for_problem(user_email: str) -> Optional[Dict[str, Any]]:
     try:
+        dynamodb = get_dynamodb_resource()
+        users_table = dynamodb.Table(USERS_TABLE)
         response = users_table.get_item(Key={"email": user_email})
         user = response.get("Item")
         if not user:
@@ -73,6 +83,10 @@ def get_active_wager_for_problem(user_email: str) -> Optional[Dict[str, Any]]:
 
 def settle_wager(user_email: str, pool_id: str, amount_bet: Decimal, status: str):
     try:
+        dynamodb = get_dynamodb_resource()
+        users_table = dynamodb.Table(USERS_TABLE)
+        wagers_table = dynamodb.Table(WAGERS_TABLE)
+        
         user_response = users_table.get_item(Key={"email": user_email})
         user = user_response.get("Item")
         if not user:
@@ -96,8 +110,9 @@ def settle_wager(user_email: str, pool_id: str, amount_bet: Decimal, status: str
 
         if status == "won":
             winnings = amount_bet * 2 # 2x payout
-            update_expression_parts.append("score = score + :win")
+            update_expression_parts.append("points = if_not_exists(points, :zero) + :win")
             expression_attribute_values[":win"] = winnings
+            expression_attribute_values[":zero"] = Decimal(0)
 
         users_table.update_item(
             Key={"email": user_email},
@@ -116,6 +131,9 @@ def settle_wager(user_email: str, pool_id: str, amount_bet: Decimal, status: str
 def auto_settle_user_wagers(user_email: str):
     """Checks and settles any matured wagers for a specific user."""
     try:
+        dynamodb = get_dynamodb_resource()
+        users_table = dynamodb.Table(USERS_TABLE)
+        
         user_res = users_table.get_item(Key={"email": user_email})
         user = user_res.get("Item")
         if not user:
@@ -128,9 +146,6 @@ def auto_settle_user_wagers(user_email: str):
         current_time = datetime.now(PT_TZ)
         current_date_str = current_time.strftime("%Y_%m_%d")
         
-        # We iterate over a copy because settle_wager modifies the user's active_wagers
-        # Actually, settle_wager fetches the user again, so we should be careful.
-        # It's better to collect what to settle and then settle them.
         wagers_to_settle = []
 
         for wager in active_wagers:
@@ -139,14 +154,11 @@ def auto_settle_user_wagers(user_email: str):
             
             # 1. Daily All Clear Settlement
             if pred_type == "daily_all_clear":
-                # pool_id format: daily_YYYY_MM_DD
                 if pool_id.startswith("daily_") and pool_id != f"daily_{current_date_str}":
-                    # This pool is from a previous day, it's matured
                     date_parts = pool_id.split("_")[1:] # [YYYY, MM, DD]
-                    wager_date = datetime(int(date_parts[0]), int(date_parts[1]), int(date_parts[2]), tzinfo=PT_TZ)
+                    wager_date = PT_TZ.localize(datetime(int(date_parts[0]), int(date_parts[1]), int(date_parts[2])))
                     
                     if current_time > (wager_date + timedelta(days=1)):
-                        # It's definitely the next day or later
                         day_idx = (wager_date - EVENT_START_DATE).days + 1
                         day_stage = f"day_{day_idx}"
                         daily_problems = get_problem_ids_for_day(day_stage)
@@ -158,7 +170,7 @@ def auto_settle_user_wagers(user_email: str):
                             else:
                                 wagers_to_settle.append((pool_id, wager["amount_bet"], "lost"))
 
-            # 2. Ironman Settlement (only if event is over)
+            # 2. Ironman Settlement
             elif pred_type == "ironman_streak":
                 event_end_date = EVENT_START_DATE + timedelta(days=7)
                 if current_time > event_end_date:
@@ -169,7 +181,6 @@ def auto_settle_user_wagers(user_email: str):
                     else:
                         wagers_to_settle.append((pool_id, wager["amount_bet"], "lost"))
 
-        # Now perform settlements
         for p_id, amt, status in wagers_to_settle:
             logger.info(f"Auto-settling wager for {user_email}: {p_id} -> {status}")
             settle_wager(user_email, p_id, amt, status)
@@ -179,29 +190,29 @@ def auto_settle_user_wagers(user_email: str):
 
 @router.get("/stats")
 async def get_wager_stats(user_email: Optional[str] = None):
-    if user_email:
-        # Auto-settle before returning stats
-        auto_settle_user_wagers(user_email)
-
-    daily_id = get_current_pool_id("daily_all_clear")
-    ironman_id = get_current_pool_id("ironman_streak")
-    
     try:
-        # Fetch Pool Data
+        dynamodb = get_dynamodb_resource()
+        users_table = dynamodb.Table(USERS_TABLE)
+        pools_table = dynamodb.Table(POOLS_TABLE)
+        
+        if user_email:
+            auto_settle_user_wagers(user_email)
+
+        daily_id = get_current_pool_id("daily_all_clear")
+        ironman_id = get_current_pool_id("ironman_streak")
+        
         daily_res = pools_table.get_item(Key={"pool_id": daily_id})
         ironman_res = pools_table.get_item(Key={"pool_id": ironman_id})
         
         daily_pool = daily_res.get("Item", {"total_pot": 0, "participant_ids": []})
         ironman_pool = ironman_res.get("Item", {"total_pot": 0, "participant_ids": []})
         
-        # User Specific Data
         user_wagers = []
         if user_email:
             user_res = users_table.get_item(Key={"email": user_email})
             user = user_res.get("Item", {})
             user_wagers = user.get("active_wagers", [])
 
-        # Format Response
         return {
             "daily": {
                 "pool_id": daily_id,
@@ -226,23 +237,27 @@ async def join_wager(request: JoinWagerRequest):
     pool_id = get_current_pool_id(request.prediction_type)
     
     try:
-        # 1. Get user and validate points
+        dynamodb = get_dynamodb_resource()
+        users_table = dynamodb.Table(USERS_TABLE)
+        pools_table = dynamodb.Table(POOLS_TABLE)
+        
         user_response = users_table.get_item(Key={"email": request.user_email})
         user = user_response.get("Item")
         
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
             
-        current_points = int(user.get("score", 0))
+        current_points = int(user.get("points", 0))
+        
+        logger.info(f"Join Wager attempt: user={request.user_email}, points={current_points}, requested_amount={request.amount}")
+        
         if current_points < request.amount:
-            raise HTTPException(status_code=400, detail="Insufficient points")
+            raise HTTPException(status_code=400, detail=f"Insufficient points: Have {current_points}, need {request.amount}")
             
-        # Check if already in this pool
         active_wagers = user.get("active_wagers", [])
         if any(w["pool_id"] == pool_id for w in active_wagers):
              raise HTTPException(status_code=400, detail="Already joined this pool")
 
-        # 2. Update User (Deduct points, add wager)
         new_wager = {
             "pool_id": pool_id,
             "amount_bet": Decimal(request.amount),
@@ -253,25 +268,38 @@ async def join_wager(request: JoinWagerRequest):
         
         users_table.update_item(
             Key={"email": request.user_email},
-            UpdateExpression="SET score = score - :amt, active_wagers = list_append(if_not_exists(active_wagers, :empty_list), :w)",
+            UpdateExpression="SET points = if_not_exists(points, :zero) - :amt, active_wagers = list_append(if_not_exists(active_wagers, :empty_list), :w)",
             ExpressionAttributeValues={
-                ":amt": Decimal(request.amount),
+                ":amt": Decimal(str(request.amount)),
                 ":w": [new_wager],
-                ":empty_list": []
+                ":empty_list": [],
+                ":zero": Decimal(0)
             }
         )
         
-        # 3. Update Pool (Add to pot, add participant)
-        pools_table.update_item(
-            Key={"pool_id": pool_id},
-            UpdateExpression="SET total_pot = if_not_exists(total_pot, :zero) + :amt, participant_ids = list_append(if_not_exists(participant_ids, :empty_list), :u)",
-            ExpressionAttributeValues={
-                ":amt": Decimal(request.amount),
-                ":u": [request.user_email],
-                ":zero": Decimal(0),
-                ":empty_list": []
-            }
-        )
+        try:
+            pools_table.update_item(
+                Key={"pool_id": pool_id},
+                UpdateExpression="SET total_pot = if_not_exists(total_pot, :zero) + :amt, participant_ids = list_append(if_not_exists(participant_ids, :empty_list), :u)",
+                ExpressionAttributeValues={
+                    ":amt": Decimal(str(request.amount)),
+                    ":u": [request.user_email],
+                    ":zero": Decimal(0),
+                    ":empty_list": []
+                }
+            )
+        except Exception as pe:
+            # If item doesn't exist at all, we might need to put it first if the table doesn't support automatic creation via update
+            # But standard DynamoDB update_item with SET and if_not_exists usually creates the item if Key is not found.
+            # However, some regions/versions might behave differently or if there are ConditionExpressions.
+            # Let's ensure it exists.
+            logger.info(f"Pool {pool_id} might not exist, creating it.")
+            pools_table.put_item(Item={
+                "pool_id": pool_id,
+                "total_pot": Decimal(str(request.amount)),
+                "participant_ids": [request.user_email],
+                "status": "open"
+            })
         
         return {"message": "Wager placed successfully", "pool_id": pool_id}
         
