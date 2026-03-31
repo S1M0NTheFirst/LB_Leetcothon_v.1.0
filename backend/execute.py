@@ -17,6 +17,11 @@ from wagers import get_active_wager_for_problem, settle_wager
 # Setup logging
 logger = logging.getLogger(__name__)
 
+# Load .env variables
+env_path = os.path.join(os.path.dirname(__file__), "..", ".env.local")
+load_dotenv(env_path)
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
 PT_TZ = pytz.timezone("America/Los_Angeles")
 
 # DynamoDB Setup
