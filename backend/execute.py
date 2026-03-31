@@ -138,7 +138,6 @@ class SubmitRequest(BaseModel):
 
 def get_current_event_stage():
     current_time = datetime.now(PT_TZ)
-    # This logic should match main.py
     event_start = datetime(2026, 3, 30, 0, 0, 0, tzinfo=PT_TZ)
     event_end = datetime(2026, 4, 5, 23, 59, 59, tzinfo=PT_TZ)
     
@@ -147,21 +146,13 @@ def get_current_event_stage():
     if current_time > event_end:
         return "event_over"
         
-    days_passed = (current_time - event_start).days
-    return f"day_{days_passed + 1}"
+    # Map March 30 -> day_1, March 31 -> day_2, etc.
+    delta = current_time.date() - event_start.date()
+    day_num = delta.days + 1
+    return f"day_{day_num}"
 
 def get_problem_by_id(problem_id: str):
-    event_stage = get_current_event_stage()
-    
-    # Prioritize finding the problem in the current event stage
-    if event_stage != "playground" and event_stage in PROBLEMS_DB:
-        for level in ["beginner", "experienced"]:
-            if level in PROBLEMS_DB[event_stage]:
-                for problem in PROBLEMS_DB[event_stage][level]:
-                    if problem["id"] == problem_id:
-                        return problem, event_stage
-
-    # If not found in current event stage, search all stages
+    # Search all stages to find the problem
     for stage in PROBLEMS_DB:
         for level in ["beginner", "experienced"]:
             if level in PROBLEMS_DB[stage]:
@@ -178,17 +169,14 @@ def get_difficulty_points(difficulty: str) -> int:
     }
     return points_map.get(difficulty, 10)
 
-async def award_points(user_email: str, problem_id: str, difficulty: str, current_stage: str, runtime_ms: float = 0, memory_mb: float = 0):
-    if current_stage == "playground":
-        return 0, False, False, False
+async def award_points(user_email: str, problem_id: str, difficulty: str, problem_stage: str, runtime_ms: float = 0, memory_mb: float = 0):
+    current_day_stage = get_current_event_stage()
     
     try:
         dynamodb = get_dynamodb_resource()
         table = dynamodb.Table(TABLE_NAME)
-        # 1. Find the problem to get its data
         problem_data, _ = get_problem_by_id(problem_id)
         
-        # 2. Get current user data
         response = table.get_item(Key={"email": user_email})
         user = response.get("Item")
         
@@ -213,13 +201,14 @@ async def award_points(user_email: str, problem_id: str, difficulty: str, curren
                 is_optimized = True
                 points_earned *= 2
 
-        # 3. Ironman Streak Logic
+        # 3. Ironman Streak Logic (Strictly use current server day in PT)
         daily_streak_map = user.get("daily_streak_map", {})
         ironman_awarded = False
         
         if not is_already_solved:
-            if current_stage.startswith("day_"):
-                daily_streak_map[current_stage] = True
+            if current_day_stage.startswith("day_"):
+                # Mark today as solved in the streak map
+                daily_streak_map[current_day_stage] = True
                 
                 all_days = [f"day_{i}" for i in range(1, 8)]
                 if all(daily_streak_map.get(d) for d in all_days) and not user.get("ironman_bonus_awarded"):
@@ -228,22 +217,28 @@ async def award_points(user_email: str, problem_id: str, difficulty: str, curren
             
             solved_problems.append(problem_id)
         else:
-            return int(user.get("points", 0)), False, is_optimized, False
+            # If already solved, still check if we need to mark the streak for today
+            if current_day_stage.startswith("day_") and not daily_streak_map.get(current_day_stage):
+                daily_streak_map[current_day_stage] = True
+                # points_earned is 0 since already solved, but we update the streak map
+                points_earned = 0
+            else:
+                return int(user.get("points", 0)), False, is_optimized, False
 
         new_points = int(user.get("points", 0)) + points_earned
         
-        # 4. Stage Completion Check
+        # 4. Stage Completion Check (Based on problem's stage)
         stage_problems = []
         for level in ["beginner", "experienced"]:
-            if current_stage in PROBLEMS_DB and level in PROBLEMS_DB[current_stage]:
-                stage_problems.extend([p["id"] for p in PROBLEMS_DB[current_stage][level]])
+            if problem_stage in PROBLEMS_DB and level in PROBLEMS_DB[problem_stage]:
+                stage_problems.extend([p["id"] for p in PROBLEMS_DB[problem_stage][level]])
         
         stage_problems = list(set(stage_problems))
         stage_solved_count = sum(1 for p in solved_problems if any(p == sp for sp in stage_problems))
         
         daily_clears = user.get("daily_clears", [])
-        if stage_solved_count >= 5 and current_stage not in daily_clears:
-            daily_clears.append(current_stage)
+        if stage_solved_count >= 5 and problem_stage not in daily_clears:
+            daily_clears.append(problem_stage)
 
         update_expr = "SET points = :p, solved_problems = :sp, daily_clears = :dc, daily_streak_map = :ds"
         expr_attr_vals = {
@@ -263,7 +258,7 @@ async def award_points(user_email: str, problem_id: str, difficulty: str, curren
             ExpressionAttributeValues=expr_attr_vals
         )
         
-        return new_points, True, is_optimized, ironman_awarded
+        return new_points, (not is_already_solved and points_earned > 0), is_optimized, ironman_awarded
     except Exception as e:
         logger.error(f"Error awarding points: {e}")
         return 0, False, False, False
@@ -285,7 +280,10 @@ async def execute_with_evaluation(user_code: str, problem_id: str, language_id: 
     elif language_id == 54: # C++
         driver_code = problem.get('cpp_driver_code', '')
         if not driver_code:
-            driver_code = "\nint main() { cout << \"PASS|ALL_CASES_PASSED\" << endl; return 0; }\n"
+            return {
+                "status": {"description": "Configuration Error", "id": 13},
+                "message": "C++ driver code missing for this problem. Please contact an admin."
+            }
         combined_code = f"{CPP_HEADERS}\n{user_code}\n\n{driver_code}"
         result = run_local_cpp(combined_code)
         return process_local_result(result, problem, stage)
@@ -293,7 +291,10 @@ async def execute_with_evaluation(user_code: str, problem_id: str, language_id: 
     elif language_id == 50: # C
         driver_code = problem.get('c_driver_code', '')
         if not driver_code:
-            driver_code = "\nint main() { printf(\"PASS|ALL_CASES_PASSED\\n\"); return 0; }\n"
+            return {
+                "status": {"description": "Configuration Error", "id": 13},
+                "message": "C driver code missing for this problem. Please contact an admin."
+            }
         combined_code = f"{C_HEADERS}\n{user_code}\n\n{driver_code}"
         result = run_local_c(combined_code)
         return process_local_result(result, problem, stage)
@@ -301,7 +302,10 @@ async def execute_with_evaluation(user_code: str, problem_id: str, language_id: 
     elif language_id == 62: # Java
         driver_code = problem.get('java_driver_code', '')
         if not driver_code:
-            driver_code = "\nclass Main { public static void main(String[] args) { System.out.println(\"PASS|ALL_CASES_PASSED\"); } }\n"
+            return {
+                "status": {"description": "Configuration Error", "id": 13},
+                "message": "Java driver code missing for this problem. Please contact an admin."
+            }
         combined_code = f"{JAVA_HEADERS}\n{user_code}\n\n{driver_code}"
         result = run_local_java(combined_code)
         return process_local_result(result, problem, stage)
