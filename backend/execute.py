@@ -279,14 +279,86 @@ async def execute_with_evaluation(user_code: str, problem_id: str, language_id: 
 
     elif language_id == 54: # C++
         driver_code = problem.get('cpp_driver_code', '')
+        
+        # Auto-generate driver if missing and matches string->bool pattern
+        if not driver_code:
+            starter = problem.get('starter_code', {}).get('cpp', '')
+            import re
+            match = re.search(r'bool\s+(\w+)\s*\(\s*string', starter)
+            if match:
+                method_name = match.group(1)
+                driver_code = f"""
+int main(int argc, char* argv[]) {{
+    if (argc < 2) {{
+        cout << "false" << endl;
+        return 1;
+    }}
+    string s = argv[1];
+    Solution obj;
+    bool result = obj.{method_name}(s);
+    cout << (result ? "true" : "false") << endl;
+    return 0;
+}}
+"""
+        
         if not driver_code:
             return {
                 "status": {"description": "Configuration Error", "id": 13},
                 "message": "C++ driver code missing for this problem. Please contact an admin."
             }
-        combined_code = f"{CPP_HEADERS}\n{user_code}\n\n{driver_code}"
-        result = run_local_cpp(combined_code)
-        return process_local_result(result, problem, stage)
+        
+        # If the driver code has the user code placeholder, use it; otherwise prepend.
+        if "// {{USER_CODE}}" in driver_code:
+            combined_code = driver_code.replace("// {{USER_CODE}}", user_code)
+        else:
+            combined_code = f"{CPP_HEADERS}\n{user_code}\n\n{driver_code}"
+            
+        # Check if driver uses argc/argv pattern for multi-test case execution
+        if "argc" in driver_code and "argv" in driver_code:
+            all_passed = True
+            test_outputs = []
+            for i, tc in enumerate(problem.get('public_test_cases', [])):
+                # Extract input value from "s = \"...\""
+                input_raw = tc['input']
+                if ' = ' in input_raw:
+                    input_val = input_raw.split(' = ', 1)[1]
+                    if input_val.startswith('"') and input_val.endswith('"'):
+                        input_val = input_val[1:-1]
+                else:
+                    input_val = input_raw
+                
+                res = run_local_cpp(combined_code, [input_val])
+                if res['status']['id'] != 3:
+                    return process_local_result(res, problem, stage)
+                
+                actual = res['stdout'].strip().lower()
+                expected = tc['expected'].strip().lower()
+                
+                if actual != expected:
+                    all_passed = False
+                    test_outputs.append(f"FAIL|Test {i+1} Failed: Expected {expected}, got {actual}")
+                    break
+            
+            if all_passed:
+                final_res = {
+                    "status": {"description": "Accepted", "id": 3},
+                    "stdout": "PASS|ALL_CASES_PASSED\n",
+                    "stderr": "",
+                    "time": 0,
+                    "memory": 0
+                }
+            else:
+                final_res = {
+                    "status": {"description": "Wrong Answer", "id": 4},
+                    "stdout": "\n".join(test_outputs),
+                    "stderr": "",
+                    "time": 0,
+                    "memory": 0
+                }
+            return process_local_result(final_res, problem, stage)
+        else:
+            result = run_local_cpp(combined_code)
+            return process_local_result(result, problem, stage)
 
     elif language_id == 50: # C
         driver_code = problem.get('c_driver_code', '')

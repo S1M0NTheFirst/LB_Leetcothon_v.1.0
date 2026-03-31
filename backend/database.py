@@ -1134,6 +1134,23 @@ PROBLEMS_DB = {   'day_1': {   'beginner': [   {   'description': '<p>Given an i
                                                                   'input': 's = "A man, a plan, a canal: Panama"'},
                                                               {'expected': 'false', 'input': 's = "race a car"'},
                                                               {'expected': 'true', 'input': 's = " "'}],
+                                     'cpp_driver_code': '#include <iostream>\n'
+                                                        '#include <string>\n'
+                                                        'using namespace std;\n'
+                                                        '\n'
+                                                        '// {{USER_CODE}}\n'
+                                                        '\n'
+                                                        'int main(int argc, char* argv[]) {\n'
+                                                        '    if (argc < 2) {\n'
+                                                        '        cout << "false" << endl;\n'
+                                                        '        return 1;\n'
+                                                        '    }\n'
+                                                        '    string s = argv[1];\n'
+                                                        '    Solution obj;\n'
+                                                        '    bool result = obj.isPalindrome(s);\n'
+                                                        '    cout << (result ? "true" : "false") << endl;\n'
+                                                        '    return 0;\n'
+                                                        '}',
                                      'python_driver_code': 'import sys\n'
                                                            'import json\n'
                                                            'try:\n'
@@ -1556,8 +1573,24 @@ PROBLEMS_DB = {   'day_1': {   'beginner': [   {   'description': '<p>Given an i
                                                                      'input': 's = "A man, a plan, a canal: Panama"'},
                                                                  {'expected': 'false', 'input': 's = "race a car"'},
                                                                  {'expected': 'true', 'input': 's = " "'}],
-                                        'python_driver_code': 'import sys\n'
-                                                              'import json\n'
+                                        'cpp_driver_code': '#include <iostream>\n'
+                                                           '#include <string>\n'
+                                                           'using namespace std;\n'
+                                                           '\n'
+                                                           '// {{USER_CODE}}\n'
+                                                           '\n'
+                                                           'int main(int argc, char* argv[]) {\n'
+                                                           '    if (argc < 2) {\n'
+                                                           '        cout << "false" << endl;\n'
+                                                           '        return 1;\n'
+                                                           '    }\n'
+                                                           '    string s = argv[1];\n'
+                                                           '    Solution obj;\n'
+                                                           '    bool result = obj.isPalindrome(s);\n'
+                                                           '    cout << (result ? "true" : "false") << endl;\n'
+                                                           '    return 0;\n'
+                                                           '}',
+                                        'python_driver_code': 'import sys\n'                                                              'import json\n'
                                                               'try:\n'
                                                               '    sol = Solution()\n'
                                                               '    all_passed = True\n'

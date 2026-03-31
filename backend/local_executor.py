@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-def run_local_cpp(code: str) -> Dict[str, Any]:
+def run_local_cpp(code: str, args: Optional[List[str]] = None) -> Dict[str, Any]:
     file_id = str(uuid.uuid4())
     source_file = f"/tmp/{file_id}.cpp"
     binary_file = f"/tmp/{file_id}"
@@ -32,8 +32,12 @@ def run_local_cpp(code: str) -> Dict[str, Any]:
             }
         
         # Execute
+        run_args = [binary_file]
+        if args:
+            run_args.extend(args)
+            
         execute_process = subprocess.run(
-            [binary_file],
+            run_args,
             capture_output=True,
             text=True,
             timeout=5
@@ -43,7 +47,7 @@ def run_local_cpp(code: str) -> Dict[str, Any]:
             "status": {"description": "Accepted" if execute_process.returncode == 0 else "Runtime Error", "id": 3 if execute_process.returncode == 0 else 11},
             "stdout": execute_process.stdout,
             "stderr": execute_process.stderr,
-            "time": 0, # Not easy to get precise time with subprocess.run without extra work
+            "time": 0,
             "memory": 0
         }
     except subprocess.TimeoutExpired:
@@ -62,7 +66,7 @@ def run_local_cpp(code: str) -> Dict[str, Any]:
         if os.path.exists(source_file): os.remove(source_file)
         if os.path.exists(binary_file): os.remove(binary_file)
 
-def run_local_c(code: str) -> Dict[str, Any]:
+def run_local_c(code: str, args: Optional[List[str]] = None) -> Dict[str, Any]:
     file_id = str(uuid.uuid4())
     source_file = f"/tmp/{file_id}.c"
     binary_file = f"/tmp/{file_id}"
@@ -88,8 +92,12 @@ def run_local_c(code: str) -> Dict[str, Any]:
             }
         
         # Execute
+        run_args = [binary_file]
+        if args:
+            run_args.extend(args)
+
         execute_process = subprocess.run(
-            [binary_file],
+            run_args,
             capture_output=True,
             text=True,
             timeout=5
