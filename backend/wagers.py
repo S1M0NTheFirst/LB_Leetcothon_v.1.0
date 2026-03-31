@@ -22,15 +22,17 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 # DynamoDB Setup
 USERS_TABLE = os.getenv("DYNAMODB_TABLE_NAME", "Users")
-# If DYNAMODB_TABLE_NAME contains a prefix (e.g. "leetcothon-Users"), 
-# try to apply same prefix to Pools and Wagers if they aren't explicitly set.
+# Improved Prefix detection: LB_Leetcodethon_Users -> LB_Leetcodethon_
 prefix = ""
-if "-" in USERS_TABLE and USERS_TABLE != "Users":
-    # If table is e.g. "lb-leetcothon-Users", prefix is "lb-leetcothon-"
-    prefix = USERS_TABLE.rsplit("-", 1)[0] + "-"
+if USERS_TABLE != "Users":
+    if "-" in USERS_TABLE:
+        prefix = USERS_TABLE.rsplit("-", 1)[0] + "-"
+    elif "_" in USERS_TABLE:
+        prefix = USERS_TABLE.rsplit("_", 1)[0] + "_"
 
-POOLS_TABLE = os.getenv("DYNAMODB_POOLS_TABLE", f"{prefix}Pools")
-WAGERS_TABLE = os.getenv("DYNAMODB_WAGERS_TABLE", f"{prefix}Wagers")
+# POOLS_TABLE resolution
+POOLS_TABLE = os.getenv("POOLS_TABLE_NAME") or os.getenv("DYNAMODB_POOLS_TABLE") or f"{prefix}Pools"
+WAGERS_TABLE = os.getenv("DYNAMODB_WAGERS_TABLE") or f"{prefix}Wagers"
 
 def get_dynamodb_resource():
     return boto3.resource(
@@ -50,8 +52,8 @@ def get_current_pool_id(prediction_type: str):
     if prediction_type == "ironman_streak":
         return "ironman_2026"
     
-    # Daily pool based on date
-    date_str = current_time.strftime("%Y_%m_%d")
+    # Daily pool based on date: daily_YYYY-MM-DD
+    date_str = current_time.strftime("%Y-%m-%d")
     return f"daily_{date_str}"
 
 def get_problem_ids_for_day(day_stage: str):
@@ -144,7 +146,7 @@ def auto_settle_user_wagers(user_email: str):
             return
 
         current_time = datetime.now(PT_TZ)
-        current_date_str = current_time.strftime("%Y_%m_%d")
+        current_date_str = current_time.strftime("%Y-%m-%d")
         
         wagers_to_settle = []
 
@@ -155,8 +157,9 @@ def auto_settle_user_wagers(user_email: str):
             # 1. Daily All Clear Settlement
             if pred_type == "daily_all_clear":
                 if pool_id.startswith("daily_") and pool_id != f"daily_{current_date_str}":
-                    date_parts = pool_id.split("_")[1:] # [YYYY, MM, DD]
-                    wager_date = PT_TZ.localize(datetime(int(date_parts[0]), int(date_parts[1]), int(date_parts[2])))
+                    # pool_id format: daily_YYYY-MM-DD
+                    date_part = pool_id.split("_")[1]
+                    wager_date = PT_TZ.localize(datetime.strptime(date_part, "%Y-%m-%d"))
                     
                     if current_time > (wager_date + timedelta(days=1)):
                         day_idx = (wager_date - EVENT_START_DATE).days + 1
@@ -204,8 +207,8 @@ async def get_wager_stats(user_email: Optional[str] = None):
         daily_res = pools_table.get_item(Key={"pool_id": daily_id})
         ironman_res = pools_table.get_item(Key={"pool_id": ironman_id})
         
-        daily_pool = daily_res.get("Item", {"total_pot": 0, "participant_ids": []})
-        ironman_pool = ironman_res.get("Item", {"total_pot": 0, "participant_ids": []})
+        daily_pool = daily_res.get("Item", {"total_pot": 0, "participant_count": 0})
+        ironman_pool = ironman_res.get("Item", {"total_pot": 0, "participant_count": 0})
         
         user_wagers = []
         if user_email:
@@ -217,13 +220,13 @@ async def get_wager_stats(user_email: Optional[str] = None):
             "daily": {
                 "pool_id": daily_id,
                 "total_pot": float(daily_pool.get("total_pot", 0)),
-                "participants": len(daily_pool.get("participant_ids", [])),
+                "participant_count": int(daily_pool.get("participant_count", 0)),
                 "is_joined": any(w.get("pool_id") == daily_id for w in user_wagers)
             },
             "ironman": {
                 "pool_id": ironman_id,
                 "total_pot": float(ironman_pool.get("total_pot", 0)),
-                "participants": len(ironman_pool.get("participant_ids", [])),
+                "participant_count": int(ironman_pool.get("participant_count", 0)),
                 "is_joined": any(w.get("pool_id") == ironman_id for w in user_wagers)
             },
             "user_wagers": [{**w, "amount_bet": float(w["amount_bet"])} for w in user_wagers]
@@ -249,8 +252,6 @@ async def join_wager(request: JoinWagerRequest):
             
         current_points = int(user.get("points", 0))
         
-        logger.info(f"Join Wager attempt: user={request.user_email}, points={current_points}, requested_amount={request.amount}")
-        
         if current_points < request.amount:
             raise HTTPException(status_code=400, detail=f"Insufficient points: Have {current_points}, need {request.amount}")
             
@@ -260,46 +261,57 @@ async def join_wager(request: JoinWagerRequest):
 
         new_wager = {
             "pool_id": pool_id,
-            "amount_bet": Decimal(request.amount),
+            "amount_bet": Decimal(str(request.amount)),
             "prediction_type": request.prediction_type,
             "status": "active",
             "timestamp": datetime.now(PT_TZ).isoformat()
         }
         
+        # 1. Deduct points and add to active_wagers
         users_table.update_item(
             Key={"email": request.user_email},
-            UpdateExpression="SET points = if_not_exists(points, :zero) - :amt, active_wagers = list_append(if_not_exists(active_wagers, :empty_list), :w)",
+            UpdateExpression="SET points = points - :amt, active_wagers = list_append(if_not_exists(active_wagers, :empty_list), :w)",
             ExpressionAttributeValues={
                 ":amt": Decimal(str(request.amount)),
                 ":w": [new_wager],
-                ":empty_list": [],
-                ":zero": Decimal(0)
+                ":empty_list": []
             }
         )
         
+        # 2. Update Pool with atomic ADD operations
         try:
             pools_table.update_item(
                 Key={"pool_id": pool_id},
-                UpdateExpression="SET total_pot = if_not_exists(total_pot, :zero) + :amt, participant_ids = list_append(if_not_exists(participant_ids, :empty_list), :u)",
+                UpdateExpression="ADD total_pot :amt, participant_count :one, participants :email_set",
                 ExpressionAttributeValues={
                     ":amt": Decimal(str(request.amount)),
-                    ":u": [request.user_email],
-                    ":zero": Decimal(0),
-                    ":empty_list": []
+                    ":one": Decimal(1),
+                    ":email_set": {request.user_email} # String Set
                 }
             )
         except Exception as pe:
-            # If item doesn't exist at all, we might need to put it first if the table doesn't support automatic creation via update
-            # But standard DynamoDB update_item with SET and if_not_exists usually creates the item if Key is not found.
-            # However, some regions/versions might behave differently or if there are ConditionExpressions.
-            # Let's ensure it exists.
-            logger.info(f"Pool {pool_id} might not exist, creating it.")
-            pools_table.put_item(Item={
-                "pool_id": pool_id,
-                "total_pot": Decimal(str(request.amount)),
-                "participant_ids": [request.user_email],
-                "status": "open"
-            })
+            logger.error(f"Pool update failed, rolling back user points: {pe}")
+            # Rollback: Refund points and remove the last added wager
+            try:
+                user_rollback_res = users_table.get_item(Key={"email": request.user_email})
+                user_rollback = user_rollback_res.get("Item")
+                if user_rollback:
+                    current_wagers = user_rollback.get("active_wagers", [])
+                    if current_wagers and current_wagers[-1]["pool_id"] == pool_id:
+                        current_wagers.pop()
+                    
+                    users_table.update_item(
+                        Key={"email": request.user_email},
+                        UpdateExpression="SET points = points + :amt, active_wagers = :w",
+                        ExpressionAttributeValues={
+                            ":amt": Decimal(str(request.amount)),
+                            ":w": current_wagers
+                        }
+                    )
+            except Exception as rollback_err:
+                logger.error(f"CRITICAL: Rollback failed: {rollback_err}")
+            
+            raise HTTPException(status_code=500, detail=f"Database Error: {str(pe)}")
         
         return {"message": "Wager placed successfully", "pool_id": pool_id}
         

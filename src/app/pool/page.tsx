@@ -60,11 +60,11 @@ export default function PredictionPoolPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      const data = await res.json();
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Failed to join pool");
+        throw new Error(data.detail || "Failed to join pool");
       }
-      return res.json();
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wagerStats"] });
@@ -116,7 +116,7 @@ export default function PredictionPoolPage() {
     if (!pool) return 0;
     
     const currentPot = pool.total_pot || 0;
-    const currentParticipants = pool.participants || 0;
+    const currentParticipants = pool.participant_count || 0;
     
     return Math.floor((currentPot + betAmount) / (currentParticipants + 1) * 0.95);
   };
@@ -218,7 +218,7 @@ export default function PredictionPoolPage() {
                 <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-white/20" />
                     <span className="text-[10px] font-mono text-white/30 uppercase tracking-widest">
-                        {(cat.stats?.participants || 0)} Hackers Joined
+                        {(cat.stats?.participant_count || 0)} Hackers Joined
                     </span>
                 </div>
                 {cat.isJoined ? (

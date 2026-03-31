@@ -40,6 +40,39 @@ if api_key:
 # Initialize FastAPI app
 app = FastAPI()
 
+# Startup event to check DynamoDB tables
+@app.on_event("startup")
+async def startup_event():
+    try:
+        # Use client to list tables
+        dynamodb_client = boto3.client(
+            "dynamodb",
+            region_name=os.getenv("AWS_REGION", "us-east-1"),
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
+        )
+        response = dynamodb_client.list_tables()
+        tables = response.get("TableNames", [])
+        logger.info(f"DynamoDB Tables found: {tables}")
+        
+        # Check for Pools table
+        # We need to resolve the name same way as in wagers.py
+        users_table_name = os.getenv("DYNAMODB_TABLE_NAME", "Users")
+        prefix = ""
+        if "-" in users_table_name and users_table_name != "Users":
+            prefix = users_table_name.rsplit("-", 1)[0] + "-"
+        
+        expected_pools_table = os.getenv("POOLS_TABLE_NAME") or os.getenv("DYNAMODB_POOLS_TABLE") or f"{prefix}Pools"
+        
+        if expected_pools_table not in tables:
+            logger.warning(f"CRITICAL: Expected Pools table '{expected_pools_table}' NOT FOUND in DynamoDB!")
+            print(f"CRITICAL WARNING: Expected Pools table '{expected_pools_table}' NOT FOUND in DynamoDB!")
+        else:
+            logger.info(f"Verified Pools table '{expected_pools_table}' exists.")
+            
+    except Exception as e:
+        logger.error(f"Error during startup DynamoDB check: {e}")
+
 # Include Routers
 app.include_router(execute_router)
 app.include_router(wagers_router)
