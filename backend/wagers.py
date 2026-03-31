@@ -151,38 +151,38 @@ def auto_settle_user_wagers(user_email: str):
         wagers_to_settle = []
 
         for wager in active_wagers:
-            pool_id = wager.get("pool_id")
+            pool_id = wager.get("pool_id", "")
             pred_type = wager.get("prediction_type")
             
-            # 1. Daily All Clear Settlement
-            if pred_type == "daily_all_clear":
-                if pool_id.startswith("daily_") and pool_id != f"daily_{current_date_str}":
-                    # pool_id format: daily_YYYY-MM-DD
-                    date_part = pool_id.split("_")[1]
-                    wager_date = PT_TZ.localize(datetime.strptime(date_part, "%Y-%m-%d"))
-                    
-                    if current_time > (wager_date + timedelta(days=1)):
-                        day_idx = (wager_date - EVENT_START_DATE).days + 1
-                        day_stage = f"day_{day_idx}"
-                        daily_problems = get_problem_ids_for_day(day_stage)
-                        
-                        if daily_problems:
-                            solved_problems = user.get("solved_problems", [])
-                            if all(p_id in solved_problems for p_id in daily_problems):
-                                wagers_to_settle.append((pool_id, wager["amount_bet"], "won"))
-                            else:
-                                wagers_to_settle.append((pool_id, wager["amount_bet"], "lost"))
+            # Skip Ironman wagers in the daily auto-settle loop
+            if pool_id.startswith("ironman_"):
+                continue
 
-            # 2. Ironman Settlement
-            elif pred_type == "ironman_streak":
-                event_end_date = EVENT_START_DATE + timedelta(days=7)
-                if current_time > event_end_date:
-                    daily_streak_map = user.get("daily_streak_map", {})
-                    all_days_completed = all(daily_streak_map.get(f"day_{i}") for i in range(1, 8))
-                    if all_days_completed:
-                        wagers_to_settle.append((pool_id, wager["amount_bet"], "won"))
-                    else:
-                        wagers_to_settle.append((pool_id, wager["amount_bet"], "lost"))
+            # 1. Daily All Clear Settlement
+            if pool_id.startswith("daily_"):
+                if pred_type == "daily_all_clear" and pool_id != f"daily_{current_date_str}":
+                    try:
+                        # pool_id format: daily_YYYY-MM-DD
+                        parts = pool_id.split("_")
+                        if len(parts) < 2:
+                            continue
+                        date_part = parts[1]
+                        wager_date = PT_TZ.localize(datetime.strptime(date_part, "%Y-%m-%d"))
+                        
+                        if current_time > (wager_date + timedelta(days=1)):
+                            day_idx = (wager_date - EVENT_START_DATE).days + 1
+                            day_stage = f"day_{day_idx}"
+                            daily_problems = get_problem_ids_for_day(day_stage)
+                            
+                            if daily_problems:
+                                solved_problems = user.get("solved_problems", [])
+                                if all(p_id in solved_problems for p_id in daily_problems):
+                                    wagers_to_settle.append((pool_id, wager["amount_bet"], "won"))
+                                else:
+                                    wagers_to_settle.append((pool_id, wager["amount_bet"], "lost"))
+                    except (ValueError, IndexError) as e:
+                        logger.warning(f"Error parsing date from pool_id {pool_id}: {e}")
+                        continue
 
         for p_id, amt, status in wagers_to_settle:
             logger.info(f"Auto-settling wager for {user_email}: {p_id} -> {status}")
