@@ -2,7 +2,7 @@ import os
 import subprocess
 import uuid
 import logging
-from typing import Dict, Any, Optional
+from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 

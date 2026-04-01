@@ -146,8 +146,32 @@ export default function PredictionPoolPage() {
       
       <div className="max-w-7xl mx-auto px-6 py-12 pb-48">
         
-        {/* Header Section - Dual Pools */}
-        <div className="flex flex-col md:flex-row items-center justify-center gap-12 mb-16">
+        {/* Header Section - Triple Pools */}
+        <div className="flex flex-col lg:flex-row items-center justify-center gap-12 mb-16">
+          {/* Quick Solve Pool Display */}
+          <div className="flex flex-col items-center">
+            <motion.div 
+              animate={{ boxShadow: ["0 0 20px rgba(255,199,44,0.02)", "0 0 40px rgba(255,199,44,0.1)", "0 0 20px rgba(255,199,44,0.02)"] }}
+              transition={{ duration: 4, repeat: Infinity, delay: 0.5 }}
+              className="relative w-56 h-56 flex items-center justify-center rounded-full bg-white/[0.01] border border-white/5"
+            >
+              <div className="absolute inset-0 rounded-full border border-dashed border-[#FFC72C]/10 animate-[spin_35s_linear_infinite]" />
+              <div className="text-center z-10">
+                <p className="text-[9px] font-mono text-white/30 uppercase tracking-[0.3em] mb-1">Quick Solve</p>
+                <h3 className="text-4xl font-black text-white italic tracking-tighter">
+                  {isStatsLoading ? "---" : (stats?.next_problem?.total_pot || 0).toLocaleString()}
+                </h3>
+                <p className="text-[#FFC72C]/60 font-black text-[10px] uppercase italic">Current Pot</p>
+              </div>
+            </motion.div>
+          </div>
+
+          <div className="hidden lg:flex flex-col items-center opacity-20">
+            <div className="h-16 w-[1px] bg-gradient-to-b from-transparent via-[#FFC72C] to-transparent" />
+            <span className="font-mono text-[10px] my-2">VS</span>
+            <div className="h-16 w-[1px] bg-gradient-to-b from-transparent via-[#FFC72C] to-transparent" />
+          </div>
+
           {/* Daily Pool Display */}
           <div className="flex flex-col items-center">
             <motion.div 
@@ -155,7 +179,7 @@ export default function PredictionPoolPage() {
               transition={{ duration: 4, repeat: Infinity }}
               className="relative w-56 h-56 flex items-center justify-center rounded-full bg-white/[0.01] border border-white/5"
             >
-              <div className="absolute inset-0 rounded-full border border-dashed border-[#FFC72C]/10 animate-[spin_30s_linear_infinite]" />
+              <div className="absolute inset-0 rounded-full border border-dashed border-[#FFC72C]/10 animate-[spin_30s_linear_infinite_reverse]" />
               <div className="text-center z-10">
                 <p className="text-[9px] font-mono text-white/30 uppercase tracking-[0.3em] mb-1">Daily Pool</p>
                 <h3 className="text-4xl font-black text-white italic tracking-tighter">
@@ -166,11 +190,10 @@ export default function PredictionPoolPage() {
             </motion.div>
           </div>
 
-          {/* VS Divider or Total */}
-          <div className="hidden md:flex flex-col items-center opacity-20">
-            <div className="h-20 w-[1px] bg-gradient-to-b from-transparent via-[#FFC72C] to-transparent" />
+          <div className="hidden lg:flex flex-col items-center opacity-20">
+            <div className="h-16 w-[1px] bg-gradient-to-b from-transparent via-[#FFC72C] to-transparent" />
             <span className="font-mono text-[10px] my-2">VS</span>
-            <div className="h-20 w-[1px] bg-gradient-to-b from-transparent via-[#FFC72C] to-transparent" />
+            <div className="h-16 w-[1px] bg-gradient-to-b from-transparent via-[#FFC72C] to-transparent" />
           </div>
 
           {/* Ironman Pool Display */}
@@ -180,7 +203,7 @@ export default function PredictionPoolPage() {
               transition={{ duration: 4, repeat: Infinity, delay: 1 }}
               className="relative w-56 h-56 flex items-center justify-center rounded-full bg-white/[0.01] border border-white/5"
             >
-              <div className="absolute inset-0 rounded-full border border-dashed border-[#FFC72C]/10 animate-[spin_25s_linear_infinite_reverse]" />
+              <div className="absolute inset-0 rounded-full border border-dashed border-[#FFC72C]/10 animate-[spin_25s_linear_infinite]" />
               <div className="text-center z-10">
                 <p className="text-[9px] font-mono text-white/30 uppercase tracking-[0.3em] mb-1">Ironman Pool</p>
                 <h3 className="text-4xl font-black text-white italic tracking-tighter">
