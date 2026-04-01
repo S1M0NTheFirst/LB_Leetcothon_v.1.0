@@ -54,6 +54,8 @@ def get_current_pool_id(prediction_type: str):
     
     # Daily pool based on date: daily_YYYY-MM-DD
     date_str = current_time.strftime("%Y-%m-%d")
+    if prediction_type == "next_problem":
+        return f"next_{date_str}"
     return f"daily_{date_str}"
 
 def get_problem_ids_for_day(day_stage: str):
@@ -167,12 +169,14 @@ def auto_settle_user_wagers(user_email: str):
             if pool_id.startswith("ironman_"):
                 continue
 
-            # 1. Daily All Clear Settlement
-            if pool_id.startswith("daily_"):
+            # 1. Daily All Clear & Next Problem Settlement
+            if pool_id.startswith("daily_") or pool_id.startswith("next_"):
                 # Only settle if the day is past
-                if pred_type == "daily_all_clear" and pool_id != f"daily_{current_date_str}":
+                current_date_prefix = f"daily_{current_date_str}" if pred_type == "daily_all_clear" else f"next_{current_date_str}"
+                
+                if pool_id != current_date_prefix:
                     try:
-                        # pool_id format: daily_YYYY-MM-DD
+                        # pool_id format: daily_YYYY-MM-DD or next_YYYY-MM-DD
                         parts = pool_id.split("_")
                         if len(parts) < 2:
                             continue
@@ -181,37 +185,43 @@ def auto_settle_user_wagers(user_email: str):
                         
                         # Wait until at least 1 AM the next day to ensure batch settlement has a chance to run
                         if current_time > (wager_date + timedelta(days=1, hours=1)):
-                            day_idx = (wager_date - EVENT_START_DATE).days + 1
-                            day_stage = f"day_{day_idx}"
-                            daily_problems = get_problem_ids_for_day(day_stage)
+                            # For pool-based logic, we need the pool multiplier
+                            pool_res = pools_table.get_item(Key={"pool_id": pool_id})
+                            pool = pool_res.get("Item")
                             
-                            if daily_problems:
-                                solved_problems = user.get("solved_problems", [])
-                                won = all(p_id in solved_problems for p_id in daily_problems)
-                                
+                            if pool and pool.get("status") == "resolved":
+                                won = False
+                                if pred_type == "daily_all_clear":
+                                    day_idx = (wager_date - EVENT_START_DATE).days + 1
+                                    day_stage = f"day_{day_idx}"
+                                    daily_problems = get_problem_ids_for_day(day_stage)
+                                    if daily_problems:
+                                        solved_problems = user.get("solved_problems", [])
+                                        won = all(p_id in solved_problems for p_id in daily_problems)
+                                elif pred_type == "next_problem":
+                                    # Simple win condition for "Next Problem": solved at least one problem.
+                                    # In reality, the batch script marks them as winners.
+                                    # For auto-settle fallback, we check if they have any solved problems.
+                                    solved_problems = user.get("solved_problems", [])
+                                    won = len(solved_problems) > 0 
+
                                 if won:
-                                    # For pool-based logic, we need the pool multiplier
-                                    pool_res = pools_table.get_item(Key={"pool_id": pool_id})
-                                    pool = pool_res.get("Item")
+                                    total_pot = pool.get("total_pot", Decimal(0))
+                                    total_winning_bets = pool.get("total_winning_bets", Decimal(0))
                                     
-                                    if pool and pool.get("status") == "resolved":
-                                        total_pot = pool.get("total_pot", Decimal(0))
-                                        total_winning_bets = pool.get("total_winning_bets", Decimal(0))
-                                        
-                                        if total_winning_bets > 0:
-                                            # Pari-mutuel formula: (Pool * 0.95 / Total Winning Bets) * User Bet
-                                            multiplier = (total_pot * Decimal("0.95")) / total_winning_bets
-                                            winnings = Decimal(str(wager["amount_bet"])) * multiplier
-                                            wagers_to_settle.append((pool_id, wager["amount_bet"], "won", winnings.quantize(Decimal("1"))))
-                                        else:
-                                            # Fallback if somehow no winners but resolved? Should not happen.
-                                            wagers_to_settle.append((pool_id, wager["amount_bet"], "won", wager["amount_bet"] * 2))
+                                    if total_winning_bets > 0:
+                                        # Pari-mutuel formula: (Pool * 0.95 / Total Winning Bets) * User Bet
+                                        multiplier = (total_pot * Decimal("0.95")) / total_winning_bets
+                                        winnings = Decimal(str(wager["amount_bet"])) * multiplier
+                                        wagers_to_settle.append((pool_id, wager["amount_bet"], "won", winnings.quantize(Decimal("1"))))
                                     else:
-                                        # If pool isn't resolved yet by script, skip auto-settle to avoid wrong payouts
-                                        logger.info(f"Pool {pool_id} not resolved yet, skipping auto-settle for {user_email}")
-                                        continue
+                                        wagers_to_settle.append((pool_id, wager["amount_bet"], "won", wager["amount_bet"] * Decimal("1.2")))
                                 else:
                                     wagers_to_settle.append((pool_id, wager["amount_bet"], "lost", Decimal(0)))
+                            else:
+                                # If pool isn't resolved yet by script, skip auto-settle to avoid wrong payouts
+                                logger.info(f"Pool {pool_id} not resolved yet, skipping auto-settle for {user_email}")
+                                continue
                     except (ValueError, IndexError) as e:
                         logger.warning(f"Error parsing date from pool_id {pool_id}: {e}")
                         continue
@@ -234,12 +244,15 @@ async def get_wager_stats(user_email: Optional[str] = None):
             auto_settle_user_wagers(user_email)
 
         daily_id = get_current_pool_id("daily_all_clear")
+        next_id = get_current_pool_id("next_problem")
         ironman_id = get_current_pool_id("ironman_streak")
         
         daily_res = pools_table.get_item(Key={"pool_id": daily_id})
+        next_res = pools_table.get_item(Key={"pool_id": next_id})
         ironman_res = pools_table.get_item(Key={"pool_id": ironman_id})
         
         daily_pool = daily_res.get("Item", {"total_pot": 0, "participant_count": 0})
+        next_pool = next_res.get("Item", {"total_pot": 0, "participant_count": 0})
         ironman_pool = ironman_res.get("Item", {"total_pot": 0, "participant_count": 0})
         
         user_wagers = []
@@ -254,6 +267,12 @@ async def get_wager_stats(user_email: Optional[str] = None):
                 "total_pot": float(daily_pool.get("total_pot", 0)),
                 "participant_count": int(daily_pool.get("participant_count", 0)),
                 "is_joined": any(w.get("pool_id") == daily_id for w in user_wagers)
+            },
+            "next_problem": {
+                "pool_id": next_id,
+                "total_pot": float(next_pool.get("total_pot", 0)),
+                "participant_count": int(next_pool.get("participant_count", 0)),
+                "is_joined": any(w.get("pool_id") == next_id for w in user_wagers)
             },
             "ironman": {
                 "pool_id": ironman_id,

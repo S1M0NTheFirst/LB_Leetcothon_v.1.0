@@ -26,7 +26,7 @@ export default function PredictionPoolPage() {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const [betAmount, setBetAmount] = useState<number>(50);
-  const [selectedPool, setSelectedPool] = useState<"daily_all_clear" | "ironman_streak" | null>(null);
+  const [selectedPool, setSelectedPool] = useState<"daily_all_clear" | "ironman_streak" | "next_problem" | null>(null);
 
   // Fetch Pool Stats
   const { data: stats, isLoading: isStatsLoading } = useQuery({
@@ -93,6 +93,14 @@ export default function PredictionPoolPage() {
 
   const categories = [
     {
+      id: "next_problem",
+      title: "Quick Solve",
+      description: "Predict if you will solve at least ONE problem during today's active stage.",
+      icon: <Target className="w-6 h-6 text-[#FFC72C]" />,
+      stats: stats?.next_problem,
+      isJoined: stats?.next_problem?.is_joined
+    },
+    {
       id: "daily_all_clear",
       title: "Daily All-Clear",
       description: "Predict if you will solve all 5 problems for today's active stage.",
@@ -112,16 +120,26 @@ export default function PredictionPoolPage() {
 
   const calculatePotentialPayout = () => {
     if (!selectedPool || !stats) return 0;
-    const pool = selectedPool === "daily_all_clear" ? stats.daily : stats.ironman;
+    
+    let pool;
+    let fee = 0.95;
+
+    if (selectedPool === "daily_all_clear") pool = stats.daily;
+    else if (selectedPool === "ironman_streak") pool = stats.ironman;
+    else if (selectedPool === "next_problem") {
+        pool = stats.next_problem;
+        fee = 0.85; // 15% platform fee for Quick Solve
+    }
+
     if (!pool) return 0;
     
     const currentPot = pool.total_pot || 0;
     const currentParticipants = pool.participant_count || 0;
     
-    return Math.floor((currentPot + betAmount) / (currentParticipants + 1) * 0.95);
+    return Math.floor((currentPot + betAmount) / (currentParticipants + 1) * fee);
   };
 
-  const totalCommunityPot = (stats?.daily?.total_pot || 0) + (stats?.ironman?.total_pot || 0);
+  const totalCommunityPot = (stats?.daily?.total_pot || 0) + (stats?.ironman?.total_pot || 0) + (stats?.next_problem?.total_pot || 0);
 
   return (
     <div className="min-h-screen bg-[#111111] text-white selection:bg-[#FFC72C] selection:text-black relative overflow-hidden">
@@ -183,7 +201,7 @@ export default function PredictionPoolPage() {
         </div>
 
         {/* Betting Categories */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {categories.map((cat) => (
             <motion.div 
               key={cat.id}
@@ -254,7 +272,7 @@ export default function PredictionPoolPage() {
                             </li>
                             <li className="flex gap-2">
                                 <span className="text-[#FFC72C] font-bold">03.</span>
-                                A 5% platform fee is deducted from the pot for event hardware & prizes.
+                                A 5% platform fee is deducted from the pot for event hardware & prizes. (15% for Quick Solve)
                             </li>
                         </ul>
                     </div>

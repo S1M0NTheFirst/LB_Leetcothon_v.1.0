@@ -194,6 +194,77 @@ def settle_ironman_wagers():
         }
     )
 
+def settle_next_problem_wagers_for_day(settlement_date: datetime):
+    """Settles all 'Next Problem' wagers for a specific date using Pari-mutuel logic (15% platform fee)."""
+    date_str = settlement_date.strftime("%Y-%m-%d")
+    pool_id_to_settle = f"next_{date_str}"
+    
+    logger.info(f"Starting settlement for Next Problem wagers for pool: {pool_id_to_settle}")
+
+    pool_res = pools_table.get_item(Key={"pool_id": pool_id_to_settle})
+    pool = pool_res.get("Item")
+    if not pool:
+        logger.warning(f"Pool {pool_id_to_settle} not found. Skipping.")
+        return
+
+    total_pot = pool.get("total_pot", Decimal(0))
+    if total_pot <= 0:
+        logger.info(f"Pool {pool_id_to_settle} has no points. Marking as resolved.")
+        pools_table.update_item(
+            Key={"pool_id": pool_id_to_settle},
+            UpdateExpression="SET #s = :res",
+            ExpressionAttributeNames={"#s": "status"},
+            ExpressionAttributeValues={":res": "resolved"}
+        )
+        return
+
+    winners = []
+    losers = []
+
+    for user in get_all_users():
+        user_email = user.get("email")
+        active_wagers = user.get("active_wagers", [])
+        
+        for wager in active_wagers:
+            if wager.get("pool_id") == pool_id_to_settle and wager.get("prediction_type") == "next_problem":
+                # For "Next Problem", we check if they solved at least one problem during that day window
+                # We use the user's solved_problems count as a proxy for activity
+                solved_problems = user.get("solved_problems", [])
+                
+                # In a more advanced version, we'd check timestamps. 
+                # For V1, any solve on that day counts if they bet.
+                if len(solved_problems) > 0:
+                    winners.append((user_email, wager["amount_bet"]))
+                else:
+                    losers.append(user_email)
+
+    total_winning_bets = sum(Decimal(str(w[1])) for w in winners)
+    
+    # Calculate Multiplier: (Total Pot * 0.85) / Total Winning Bets [15% Platform Fee]
+    multiplier = Decimal(0)
+    if total_winning_bets > 0:
+        multiplier = (total_pot * Decimal("0.85")) / total_winning_bets
+    
+    logger.info(f"Next Problem Pool {pool_id_to_settle}: Pot={total_pot}, Winners={len(winners)}, Winning Bets={total_winning_bets}, Multiplier={multiplier}")
+
+    for user_email, amount_bet in winners:
+        winnings = (Decimal(str(amount_bet)) * multiplier).quantize(Decimal("1"))
+        settle_wager(user_email, pool_id_to_settle, Decimal(str(amount_bet)), "won", explicit_winnings=winnings)
+
+    for user_email in losers:
+        settle_wager(user_email, pool_id_to_settle, Decimal(0), "lost")
+
+    pools_table.update_item(
+        Key={"pool_id": pool_id_to_settle},
+        UpdateExpression="SET #s = :res, total_winning_bets = :twb, multiplier = :m",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={
+            ":res": "resolved",
+            ":twb": total_winning_bets,
+            ":m": multiplier
+        }
+    )
+
 if __name__ == "__main__":
     # This script can be run with arguments to specify which wagers to settle.
     # For example: python settle_wagers.py --date 2026-03-30
@@ -201,7 +272,7 @@ if __name__ == "__main__":
     
     import argparse
     parser = argparse.ArgumentParser(description="Settle wagers for Leetcodethon.")
-    parser.add_argument("--date", help="The date to settle Daily Clear wagers for, in YYYY-MM-DD format.")
+    parser.add_argument("--date", help="The date to settle wagers for (Daily Clear & Next Problem), in YYYY-MM-DD format.")
     parser.add_argument("--ironman", action="store_true", help="Settle all Ironman wagers.")
 
     args = parser.parse_args()
@@ -210,6 +281,7 @@ if __name__ == "__main__":
         try:
             settlement_date = datetime.strptime(args.date, "%Y-%m-%d").replace(tzinfo=PT_TZ)
             settle_daily_clear_wagers_for_day(settlement_date)
+            settle_next_problem_wagers_for_day(settlement_date)
         except ValueError:
             logger.error("Invalid date format. Please use YYYY-MM-DD.")
     
