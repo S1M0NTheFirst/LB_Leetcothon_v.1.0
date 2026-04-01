@@ -83,7 +83,7 @@ def get_active_wager_for_problem(user_email: str) -> Optional[Dict[str, Any]]:
         logger.error(f"Error getting active wager: {e}")
         return None
 
-def settle_wager(user_email: str, pool_id: str, amount_bet: Decimal, status: str):
+def settle_wager(user_email: str, pool_id: str, amount_bet: Decimal, status: str, explicit_winnings: Optional[Decimal] = None):
     try:
         dynamodb = get_dynamodb_resource()
         users_table = dynamodb.Table(USERS_TABLE)
@@ -111,10 +111,18 @@ def settle_wager(user_email: str, pool_id: str, amount_bet: Decimal, status: str
         expression_attribute_values = {":new_wagers": active_wagers}
 
         if status == "won":
-            winnings = amount_bet * 2 # 2x payout
+            if explicit_winnings is not None:
+                winnings = explicit_winnings
+            else:
+                # Fallback to 2x if no explicit payout provided
+                winnings = amount_bet * 2
+            
             update_expression_parts.append("points = if_not_exists(points, :zero) + :win")
             expression_attribute_values[":win"] = winnings
             expression_attribute_values[":zero"] = Decimal(0)
+            wager_to_settle["payout"] = winnings
+        else:
+            wager_to_settle["payout"] = 0
 
         users_table.update_item(
             Key={"email": user_email},
@@ -125,7 +133,7 @@ def settle_wager(user_email: str, pool_id: str, amount_bet: Decimal, status: str
         wager_to_settle["status"] = status
         wager_to_settle["settled_at"] = datetime.now(PT_TZ).isoformat()
         wagers_table.put_item(Item=wager_to_settle)
-        logger.info(f"Successfully settled wager for {user_email} in pool {pool_id} as {status}")
+        logger.info(f"Successfully settled wager for {user_email} in pool {pool_id} as {status} (Payout: {wager_to_settle.get('payout')})")
 
     except Exception as e:
         logger.error(f"Error settling wager: {e}")
@@ -135,6 +143,7 @@ def auto_settle_user_wagers(user_email: str):
     try:
         dynamodb = get_dynamodb_resource()
         users_table = dynamodb.Table(USERS_TABLE)
+        pools_table = dynamodb.Table(POOLS_TABLE)
         
         user_res = users_table.get_item(Key={"email": user_email})
         user = user_res.get("Item")
@@ -160,6 +169,7 @@ def auto_settle_user_wagers(user_email: str):
 
             # 1. Daily All Clear Settlement
             if pool_id.startswith("daily_"):
+                # Only settle if the day is past
                 if pred_type == "daily_all_clear" and pool_id != f"daily_{current_date_str}":
                     try:
                         # pool_id format: daily_YYYY-MM-DD
@@ -169,24 +179,46 @@ def auto_settle_user_wagers(user_email: str):
                         date_part = parts[1]
                         wager_date = PT_TZ.localize(datetime.strptime(date_part, "%Y-%m-%d"))
                         
-                        if current_time > (wager_date + timedelta(days=1)):
+                        # Wait until at least 1 AM the next day to ensure batch settlement has a chance to run
+                        if current_time > (wager_date + timedelta(days=1, hours=1)):
                             day_idx = (wager_date - EVENT_START_DATE).days + 1
                             day_stage = f"day_{day_idx}"
                             daily_problems = get_problem_ids_for_day(day_stage)
                             
                             if daily_problems:
                                 solved_problems = user.get("solved_problems", [])
-                                if all(p_id in solved_problems for p_id in daily_problems):
-                                    wagers_to_settle.append((pool_id, wager["amount_bet"], "won"))
+                                won = all(p_id in solved_problems for p_id in daily_problems)
+                                
+                                if won:
+                                    # For pool-based logic, we need the pool multiplier
+                                    pool_res = pools_table.get_item(Key={"pool_id": pool_id})
+                                    pool = pool_res.get("Item")
+                                    
+                                    if pool and pool.get("status") == "resolved":
+                                        total_pot = pool.get("total_pot", Decimal(0))
+                                        total_winning_bets = pool.get("total_winning_bets", Decimal(0))
+                                        
+                                        if total_winning_bets > 0:
+                                            # Pari-mutuel formula: (Pool * 0.95 / Total Winning Bets) * User Bet
+                                            multiplier = (total_pot * Decimal("0.95")) / total_winning_bets
+                                            winnings = Decimal(str(wager["amount_bet"])) * multiplier
+                                            wagers_to_settle.append((pool_id, wager["amount_bet"], "won", winnings.quantize(Decimal("1"))))
+                                        else:
+                                            # Fallback if somehow no winners but resolved? Should not happen.
+                                            wagers_to_settle.append((pool_id, wager["amount_bet"], "won", wager["amount_bet"] * 2))
+                                    else:
+                                        # If pool isn't resolved yet by script, skip auto-settle to avoid wrong payouts
+                                        logger.info(f"Pool {pool_id} not resolved yet, skipping auto-settle for {user_email}")
+                                        continue
                                 else:
-                                    wagers_to_settle.append((pool_id, wager["amount_bet"], "lost"))
+                                    wagers_to_settle.append((pool_id, wager["amount_bet"], "lost", Decimal(0)))
                     except (ValueError, IndexError) as e:
                         logger.warning(f"Error parsing date from pool_id {pool_id}: {e}")
                         continue
 
-        for p_id, amt, status in wagers_to_settle:
-            logger.info(f"Auto-settling wager for {user_email}: {p_id} -> {status}")
-            settle_wager(user_email, p_id, amt, status)
+        for p_id, amt, status, winnings in wagers_to_settle:
+            logger.info(f"Auto-settling wager for {user_email}: {p_id} -> {status} (Winnings: {winnings})")
+            settle_wager(user_email, p_id, amt, status, explicit_winnings=winnings)
 
     except Exception as e:
         logger.error(f"Error in auto_settle_user_wagers: {e}")
