@@ -2,24 +2,12 @@ import requests
 import json
 import re
 import os
+from generate_drivers import generate_c_driver, generate_cpp_driver
 
 LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql"
 
 def fetch_problem(slug):
-    query = """
-    query questionData($titleSlug: String!) {
-      question(titleSlug: $titleSlug) {
-        questionId
-        title
-        difficulty
-        content
-        codeSnippets {
-          langSlug
-          code
-        }
-      }
-    }
-    """
+    query = "query questionData($titleSlug: String!) { question(titleSlug: $titleSlug) { questionId title difficulty content codeSnippets { langSlug code } } }"
     response = requests.post(
         LEETCODE_GRAPHQL_URL,
         json={"query": query, "variables": {"titleSlug": slug}},
@@ -38,7 +26,7 @@ def clean_html(text):
 def parse_test_cases(html_content):
     cases = []
     # Match blocks like Input: ... Output: ...
-    matches = re.finditer(r'Input:?</strong>(.*?)(?:<br />|\n)?<strong>Output:?</strong>(.*?)(?:<strong>Explanation:?</strong>|<p>|<pre>|</pre>|\n\n)', html_content, re.IGNORECASE | re.DOTALL)
+    matches = re.finditer(f"""Input:?</strong>(.*?)(?:<br />|{os.linesep})?<strong>Output:?</strong>(.*?)(?:<strong>Explanation:?</strong>|<p>|<pre>|</pre>|{os.linesep}{os.linesep})""", html_content, re.IGNORECASE | re.DOTALL)
     for m in matches:
         inp = clean_html(m.group(1)).strip()
         outp = clean_html(m.group(2)).strip()
@@ -46,7 +34,7 @@ def parse_test_cases(html_content):
             cases.append({"input": inp, "expected": outp})
             
     if not cases:
-        matches = re.finditer(r'Input:(.*?)Output:(.*?)(?:Explanation:|\n\n|$)', clean_html(html_content), re.IGNORECASE | re.DOTALL)
+        matches = re.finditer(f"""Input:(.*?)Output:(.*?)(?:Explanation:|{os.linesep}{os.linesep}|$)      """, clean_html(html_content), re.IGNORECASE | re.DOTALL)
         for m in matches:
             inp = m.group(1).strip()
             outp = m.group(2).strip()
@@ -56,7 +44,7 @@ def parse_test_cases(html_content):
     return cases
 
 def extract_method_name(python_code):
-    match = re.search(r'def (\w+)\(', python_code)
+    match = re.search(r'def (\w+)', python_code)
     if match:
         return match.group(1)
     return "unknown"
@@ -76,7 +64,12 @@ def parse_input_to_python_args(input_str):
     return args, kwargs
 
 def build_driver_code(method_name, test_cases):
-    driver_code = "import sys\nimport json\ntry:\n    sol = Solution()\n    all_passed = True\n"
+    driver_code = """import sys
+import json
+try:
+    sol = Solution()
+    all_passed = True
+"""
     for i, tc in enumerate(test_cases):
         inp = tc['input']
         expected = tc['expected']
@@ -88,14 +81,23 @@ def build_driver_code(method_name, test_cases):
         else:
             call_args = ", ".join(args)
             
-        driver_code += f"    # Test Case {i+1}\n"
-        driver_code += f"    res = sol.{method_name}({call_args})\n"
-        driver_code += f"    if str(res).replace(' ', '') != str({expected}).replace(' ', '') and res != {expected}:\n"
-        driver_code += f"        print(f'FAIL|Test {i+1} Failed: Expected {expected}, got {{res}}')\n"
-        driver_code += f"        all_passed = False\n"
+        driver_code += f"""    # Test Case {i+1}
+"""
+        driver_code += f"""    res = sol.{method_name}({call_args})
+"""
+        driver_code += f"""    if str(res).replace(' ', '') != str({expected}).replace(' ', '') and res != {expected}:
+"""
+        driver_code += f"""        print(f'FAIL|Test {i+1} Failed: Expected {expected}, got {{res}}')
+"""
+        driver_code += f"""        all_passed = False
+"""
         
-    driver_code += "    if all_passed:\n        print('PASS|ALL_CASES_PASSED')\n"
-    driver_code += "except Exception as e:\n    print(f'ERROR|Exception during execution: {e}')\n"
+    driver_code += """    if all_passed:
+        print('PASS|ALL_CASES_PASSED')
+"""
+    driver_code += """except Exception as e:
+    print(f'ERROR|Exception during execution: {e}')
+"""
     
     return driver_code
 
@@ -117,9 +119,17 @@ def process_track(track_slugs):
                 starter_code[target_langs[s['langSlug']]] = s['code']
                 
         test_cases = parse_test_cases(q['content'])
-        method_name = extract_method_name(starter_code.get('python', 'def unknown():\n    pass'))
+        method_name = extract_method_name(starter_code.get('python', '''def unknown():
+    pass'''))
         driver = build_driver_code(method_name, test_cases)
+
+        prob_data_for_drivers = {
+            "starter_code": starter_code,
+        }
         
+        c_driver = generate_c_driver(prob_data_for_drivers)
+        cpp_driver = generate_cpp_driver(prob_data_for_drivers)
+
         prob = {
             "id": slug,
             "title": q['title'],
@@ -128,7 +138,9 @@ def process_track(track_slugs):
             "description": q['content'],
             "starter_code": starter_code,
             "public_test_cases": test_cases,
-            "python_driver_code": driver
+            "python_driver_code": driver,
+            "c_driver_code": c_driver,
+            "cpp_driver_code": cpp_driver
         }
         problems.append(prob)
         points += 1
@@ -185,7 +197,8 @@ def main():
     print("Fetching problems and building database...")
     full_db = {}
     for stage, tracks in SCHEDULE.items():
-        print(f"\n--- Processing {stage} ---")
+        print(f"
+--- Processing {stage} ---")
         full_db[stage] = {
             "beginner": process_track(tracks["beginner"]),
             "experienced": process_track(tracks["experienced"])
@@ -193,8 +206,7 @@ def main():
         
     db_content = f'''import sys
 
-LIST_NODE_DEF = """
-class ListNode:
+LIST_NODE_DEF = """class ListNode:
     def __init__(self, val=0, next=None):
         self.val = val
         self.next = next
@@ -206,7 +218,8 @@ PROBLEMS_DB = {json.dumps(full_db, indent=4)}
 '''
     with open("backend/database.py", "w", encoding="utf-8") as f:
         f.write(db_content)
-    print("\nSuccessfully wrote backend/database.py")
+    print("
+Successfully wrote backend/database.py")
 
 if __name__ == "__main__":
     main()
