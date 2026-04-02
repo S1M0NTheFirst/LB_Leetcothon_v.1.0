@@ -440,6 +440,69 @@ int main(int argc, char* argv[]) {{
 
     elif language_id == 62: # Java
         driver_code = problem.get('java_driver_code', '')
+        
+        # Auto-generate driver if missing
+        if not driver_code:
+            starter = problem.get('starter_code', {}).get('java', '')
+            import re
+            
+            # Pattern: type methodName(type1 arg1, type2 arg2, ...)
+            match = re.search(r'(\w+|<[\w\s,<>]+>)\s+(\w+)\s*\(([^)]*)\)', starter)
+            if match:
+                ret_type = match.group(1).strip()
+                method_name = match.group(2).strip()
+                args_raw = match.group(3).strip()
+                
+                # Parse args to get types
+                arg_pairs = [a.strip() for a in args_raw.split(',') if a.strip()]
+                arg_types = []
+                for ap in arg_pairs:
+                    parts = ap.rsplit(' ', 1)
+                    at = parts[0].strip()
+                    arg_types.append(at)
+                
+                arg_parsers = []
+                for i, at in enumerate(arg_types):
+                    if at == 'int':
+                        arg_parsers.append(f"int arg{i} = Integer.parseInt(args[{i}].replace(\"[\", \"\").replace(\"]\", \"\").replace(\"\\\"\", \"\"));")
+                    elif at == 'String':
+                        arg_parsers.append(f"String arg{i} = args[{i}].replace(\"\\\"\", \"\");")
+                    elif at == 'int[]':
+                        arg_parsers.append(f"int[] arg{i} = java.util.Arrays.stream(args[{i}].replace(\"[\", \"\").replace(\"]\", \"\").split(\",\")).map(String::trim).mapToInt(Integer::parseInt).toArray();")
+                    else:
+                        arg_parsers.append(f"// Manual parsing needed for {at}");
+                
+                parsers_str = "\n            ".join(arg_parsers)
+                arg_calls = ", ".join([f"arg{i}" for i in range(len(arg_types))])
+                
+                # Result printer
+                if ret_type == 'boolean':
+                    printer = 'System.out.println(result);'
+                elif ret_type == 'int[]':
+                    printer = 'System.out.println(java.util.Arrays.toString(result).replace(\" \", \"\"));'
+                else:
+                    printer = 'System.out.println(result);'
+
+                driver_code = f"""
+public class Main {{
+    public static void main(String[] args) {{
+        try {{
+            if (args.length < {len(arg_types)}) {{
+                System.err.println("Insufficient arguments");
+                System.exit(1);
+            }}
+            {parsers_str}
+            Solution sol = new Solution();
+            {ret_type} result = sol.{method_name}({arg_calls});
+            {printer}
+        }} catch (Exception e) {{
+            e.printStackTrace(System.err);
+            System.exit(1);
+        }}
+    }}
+}}
+"""
+        
         if not driver_code:
             return {
                 "status": {"description": "Configuration Error", "id": 13},
@@ -452,14 +515,78 @@ int main(int argc, char* argv[]) {{
         else:
             combined_code = f"{JAVA_HEADERS}\n{user_code}\n\n{driver_code}"
             
-        result = run_local_java(combined_code)
-        
-        # If local execution fails due to environment issues, fallback to Judge0
-        if result.get("status", {}).get("id") == 13 and "Java execution environment not properly configured" in result.get("message", ""):
-             logger.warning(f"Local Java execution failed, falling back to Judge0 for user_code")
-             return await run_with_judge0(user_code, language_id)
-             
-        return process_local_result(result, problem, stage)
+        # Check if driver uses argc/argv pattern for multi-test case execution
+        if "args[" in driver_code and "public static void main(String[] args)" in driver_code:
+            all_passed = True
+            test_outputs = []
+            for i, tc in enumerate(problem.get('public_test_cases', [])):
+                # Parse inputs from LeetCode style: "nums = [2,7,11,15], target = 9"
+                input_raw = tc['input']
+                parts = []
+                bracket_level = 0
+                current = ""
+                for char in input_raw:
+                    if char == '[': bracket_level += 1
+                    elif char == ']': bracket_level -= 1
+                    
+                    if char == ',' and bracket_level == 0:
+                        parts.append(current.strip())
+                        current = ""
+                    else:
+                        current += char
+                if current:
+                    parts.append(current.strip())
+                
+                arg_values = []
+                for p in parts:
+                    if ' = ' in p:
+                        val = p.split(' = ', 1)[1]
+                        arg_values.append(val)
+                    else:
+                        arg_values.append(p)
+                
+                res = run_local_java(combined_code, arg_values)
+                if res['status']['id'] != 3:
+                    return process_local_result(res, problem, stage)
+                
+                actual = res['stdout'].strip().lower()
+                expected = tc['expected'].strip().lower()
+                actual = actual.replace(" ", "")
+                expected = expected.replace(" ", "")
+                
+                if actual != expected:
+                    all_passed = False
+                    test_outputs.append(f"FAIL|Test {i+1} Failed: Expected {expected}, got {actual}")
+                    break
+            
+            if all_passed:
+                final_res = {
+                    "status": {"description": "Accepted", "id": 3},
+                    "stdout": "PASS|ALL_CASES_PASSED\n",
+                    "stderr": "",
+                    "compile_output": "",
+                    "time": 0,
+                    "memory": 0
+                }
+            else:
+                final_res = {
+                    "status": {"description": "Wrong Answer", "id": 4},
+                    "stdout": "\n".join(test_outputs),
+                    "stderr": "",
+                    "compile_output": "",
+                    "time": 0,
+                    "memory": 0
+                }
+            return process_local_result(final_res, problem, stage)
+        else:
+            result = run_local_java(combined_code)
+            
+            # If local execution fails due to environment issues, fallback to Judge0
+            if result.get("status", {}).get("id") == 13 and "Java execution environment not properly configured" in result.get("message", ""):
+                 logger.warning(f"Local Java execution failed, falling back to Judge0 for user_code")
+                 return await run_with_judge0(user_code, language_id)
+                 
+            return process_local_result(result, problem, stage)
 
     return await run_with_judge0(user_code, language_id)
 

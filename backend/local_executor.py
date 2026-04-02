@@ -130,7 +130,7 @@ def run_local_c(code: str, args: Optional[List[str]] = None) -> Dict[str, Any]:
         if os.path.exists(source_file): os.remove(source_file)
         if os.path.exists(binary_file): os.remove(binary_file)
 
-def run_local_java(code: str) -> Dict[str, Any]:
+def run_local_java(code: str, args: Optional[List[str]] = None) -> Dict[str, Any]:
     file_id = str(uuid.uuid4())
     temp_dir = f"/tmp/{file_id}"
     os.makedirs(temp_dir, exist_ok=True)
@@ -169,8 +169,12 @@ def run_local_java(code: str) -> Dict[str, Any]:
             }
         
         # Execute
+        run_args = [java_path, "-cp", temp_dir, "Main"]
+        if args:
+            run_args.extend(args)
+
         execute_process = subprocess.run(
-            [java_path, "-cp", temp_dir, "Main"],
+            run_args,
             capture_output=True,
             text=True,
             timeout=10
