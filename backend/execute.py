@@ -604,6 +604,8 @@ async def run_with_judge0(code: str, language_id: int):
 def process_judge0_result(result, problem, stage):
     stdout = result.get("stdout") or ""
     stderr = result.get("stderr") or ""
+    judge0_message = result.get("message") or ""
+    status_desc = result.get("status", {}).get("description", "Unknown")
     
     if "PASS|" in stdout:
         return {
@@ -614,10 +616,17 @@ def process_judge0_result(result, problem, stage):
             "difficulty": problem.get("difficulty"),
             "stage": stage
         }
-    elif "FAIL|" in stdout or "ERROR|" in stdout or stderr:
+    elif "FAIL|" in stdout or "ERROR|" in stdout or stderr or judge0_message or result.get("status", {}).get("id") != 3:
+        # If Judge0 says NZEC (id 11) or other errors, use their description
+        description = status_desc if result.get("status", {}).get("id") != 3 else "Wrong Answer"
+        
+        full_message = (stdout + "\n" + stderr + "\n" + judge0_message).strip()
+        if not full_message:
+            full_message = "No output produced. Please check your code for errors."
+            
         return {
-            "status": {"description": "Wrong Answer", "id": 4},
-            "message": (stdout + "\n" + stderr).strip()
+            "status": {"description": description, "id": result.get("status", {}).get("id", 4)},
+            "message": full_message
         }
     return result
 
