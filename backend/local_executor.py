@@ -60,7 +60,8 @@ def run_local_cpp(code: str, args: Optional[List[str]] = None) -> Dict[str, Any]
         logger.error(f"Local C++ execution error: {e}")
         return {
             "status": {"description": "Internal Error", "id": 13},
-            "stderr": str(e)
+            "stderr": str(e),
+            "compile_output": ""
         }
     finally:
         if os.path.exists(source_file): os.remove(source_file)
@@ -120,7 +121,8 @@ def run_local_c(code: str, args: Optional[List[str]] = None) -> Dict[str, Any]:
         logger.error(f"Local C execution error: {e}")
         return {
             "status": {"description": "Internal Error", "id": 13},
-            "stderr": str(e)
+            "stderr": str(e),
+            "compile_output": ""
         }
     finally:
         if os.path.exists(source_file): os.remove(source_file)
@@ -130,7 +132,10 @@ def run_local_java(code: str) -> Dict[str, Any]:
     file_id = str(uuid.uuid4())
     temp_dir = f"/tmp/{file_id}"
     os.makedirs(temp_dir, exist_ok=True)
-    source_file = os.path.join(temp_dir, "Solution.java")
+    
+    # In Java, the source filename must match the public class name.
+    # Our drivers use 'public class Main'.
+    source_file = os.path.join(temp_dir, "Main.java")
     
     # Try to find javac and java paths
     javac_path = "/Library/Java/JavaVirtualMachines/jdk-22.jdk/Contents/Home/bin/javac"
@@ -158,7 +163,7 @@ def run_local_java(code: str) -> Dict[str, Any]:
                 "status": {"description": "Compilation Error", "id": 6},
                 "compile_output": compile_process.stderr,
                 "stdout": "",
-                "stderr": ""
+                "stderr": compile_process.stderr
             }
         
         # Execute
@@ -196,4 +201,5 @@ def run_local_java(code: str) -> Dict[str, Any]:
         }
     finally:
         import shutil
+        # Small delay to ensure file handles are closed
         if os.path.exists(temp_dir): shutil.rmtree(temp_dir)

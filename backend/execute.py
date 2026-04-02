@@ -445,7 +445,13 @@ int main(int argc, char* argv[]) {{
                 "status": {"description": "Configuration Error", "id": 13},
                 "message": f"Java driver code not yet implemented for problem '{problem.get('title')}'. Please try another language or contact an admin."
             }
-        combined_code = f"{JAVA_HEADERS}\n{user_code}\n\n{driver_code}"
+            
+        # If the driver code has the user code placeholder, use it; otherwise prepend.
+        if "// {{USER_CODE}}" in driver_code:
+            combined_code = driver_code.replace("// {{USER_CODE}}", user_code)
+        else:
+            combined_code = f"{JAVA_HEADERS}\n{user_code}\n\n{driver_code}"
+            
         result = run_local_java(combined_code)
         
         # If local execution fails due to environment issues, fallback to Judge0
@@ -491,6 +497,7 @@ def process_judge0_result(result, problem, stage):
 def process_local_result(result, problem, stage):
     stdout = result.get("stdout") or ""
     stderr = result.get("stderr") or ""
+    compile_out = result.get("compile_output") or ""
     
     if "PASS|" in stdout:
         return {
@@ -501,13 +508,18 @@ def process_local_result(result, problem, stage):
             "difficulty": problem.get("difficulty"),
             "stage": stage
         }
-    elif "FAIL|" in stdout or "ERROR|" in stdout or stderr or result["status"]["id"] != 3:
+    elif "FAIL|" in stdout or "ERROR|" in stdout or stderr or compile_out or result["status"]["id"] != 3:
         description = result["status"]["description"]
         if "PASS|" not in stdout and result["status"]["id"] == 3:
              description = "Wrong Answer"
+             
+        full_message = (stdout + "\n" + stderr + "\n" + compile_out).strip()
+        if not full_message:
+            full_message = "No output produced. Please check your code for errors."
+            
         return {
             "status": {"description": description, "id": result["status"]["id"]},
-            "message": (stdout + "\n" + stderr + "\n" + (result.get("compile_output") or "")).strip()
+            "message": full_message
         }
     return result
 
