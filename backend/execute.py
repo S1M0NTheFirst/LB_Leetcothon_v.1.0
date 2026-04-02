@@ -443,7 +443,7 @@ int main(int argc, char* argv[]) {{
         if not driver_code:
             return {
                 "status": {"description": "Configuration Error", "id": 13},
-                "message": "Java driver code missing for this problem. Please contact an admin."
+                "message": f"Java driver code not yet implemented for problem '{problem.get('title')}'. Please try another language or contact an admin."
             }
         combined_code = f"{JAVA_HEADERS}\n{user_code}\n\n{driver_code}"
         result = run_local_java(combined_code)
