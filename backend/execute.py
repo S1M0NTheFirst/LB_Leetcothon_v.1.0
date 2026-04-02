@@ -500,11 +500,15 @@ def process_local_result(result, problem, stage):
     compile_out = result.get("compile_output") or ""
     
     if "PASS|" in stdout:
+        clean_stdout = stdout.replace("PASS|ALL_CASES_PASSED", "").strip()
+        if not clean_stdout:
+            clean_stdout = "Accepted: All tests passed."
+            
         return {
             "status": {"description": "Accepted", "id": 3},
             "runtime_ms": round(random.uniform(10, 50), 2),
             "memory_mb": round(random.uniform(2, 10), 2),
-            "stdout": stdout.replace("PASS|ALL_CASES_PASSED", "").strip(),
+            "stdout": clean_stdout,
             "difficulty": problem.get("difficulty"),
             "stage": stage
         }

@@ -47,6 +47,7 @@ def run_local_cpp(code: str, args: Optional[List[str]] = None) -> Dict[str, Any]
             "status": {"description": "Accepted" if execute_process.returncode == 0 else "Runtime Error", "id": 3 if execute_process.returncode == 0 else 11},
             "stdout": execute_process.stdout,
             "stderr": execute_process.stderr,
+            "compile_output": compile_process.stderr,
             "time": 0,
             "memory": 0
         }
@@ -108,6 +109,7 @@ def run_local_c(code: str, args: Optional[List[str]] = None) -> Dict[str, Any]:
             "status": {"description": "Accepted" if execute_process.returncode == 0 else "Runtime Error", "id": 3 if execute_process.returncode == 0 else 11},
             "stdout": execute_process.stdout,
             "stderr": execute_process.stderr,
+            "compile_output": compile_process.stderr,
             "time": 0,
             "memory": 0
         }
@@ -178,6 +180,7 @@ def run_local_java(code: str) -> Dict[str, Any]:
             "status": {"description": "Accepted" if execute_process.returncode == 0 else "Runtime Error", "id": 3 if execute_process.returncode == 0 else 11},
             "stdout": execute_process.stdout,
             "stderr": execute_process.stderr,
+            "compile_output": compile_process.stderr,
             "time": 0,
             "memory": 0
         }
