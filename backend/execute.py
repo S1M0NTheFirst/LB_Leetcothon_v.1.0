@@ -447,6 +447,12 @@ int main(int argc, char* argv[]) {{
             }
         combined_code = f"{JAVA_HEADERS}\n{user_code}\n\n{driver_code}"
         result = run_local_java(combined_code)
+        
+        # If local execution fails due to environment issues, fallback to Judge0
+        if result.get("status", {}).get("id") == 13 and "Java execution environment not properly configured" in result.get("message", ""):
+             logger.warning(f"Local Java execution failed, falling back to Judge0 for user_code")
+             return await run_with_judge0(user_code, language_id)
+             
         return process_local_result(result, problem, stage)
 
     return await run_with_judge0(user_code, language_id)

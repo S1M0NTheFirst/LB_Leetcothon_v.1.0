@@ -128,23 +128,26 @@ def run_local_c(code: str, args: Optional[List[str]] = None) -> Dict[str, Any]:
 
 def run_local_java(code: str) -> Dict[str, Any]:
     file_id = str(uuid.uuid4())
-    # Java needs the class name to match the file name. 
-    # Assume the class is always 'Solution' or wrap it.
-    # The user's code will likely contain 'class Solution'.
     temp_dir = f"/tmp/{file_id}"
     os.makedirs(temp_dir, exist_ok=True)
     source_file = os.path.join(temp_dir, "Solution.java")
     
+    # Try to find javac and java paths
+    javac_path = "/Library/Java/JavaVirtualMachines/jdk-22.jdk/Contents/Home/bin/javac"
+    java_path = "/Library/Java/JavaVirtualMachines/jdk-22.jdk/Contents/Home/bin/java"
+    
+    if not os.path.exists(javac_path):
+        javac_path = "javac" # Fallback to PATH
+    if not os.path.exists(java_path):
+        java_path = "java" # Fallback to PATH
+
     try:
-        # Wrap user code in a Main class if needed, but usually LeetCode style is just 'class Solution'
-        # Let's assume the combined code has a public class 'Main' or we just name it Solution.java
-        # and expect the main method to be there.
         with open(source_file, "w") as f:
             f.write(code)
         
         # Compile
         compile_process = subprocess.run(
-            ["javac", source_file],
+            [javac_path, source_file],
             capture_output=True,
             text=True,
             timeout=15
@@ -158,10 +161,9 @@ def run_local_java(code: str) -> Dict[str, Any]:
                 "stderr": ""
             }
         
-        # Execute (Main class name depends on what's in the code)
-        # We'll assume the driver code provides 'class Main' with main method.
+        # Execute
         execute_process = subprocess.run(
-            ["java", "-cp", temp_dir, "Main"],
+            [java_path, "-cp", temp_dir, "Main"],
             capture_output=True,
             text=True,
             timeout=10
@@ -174,6 +176,12 @@ def run_local_java(code: str) -> Dict[str, Any]:
             "time": 0,
             "memory": 0
         }
+    except FileNotFoundError as e:
+        logger.error(f"Java tools not found: {e}")
+        return {
+            "status": {"description": "Internal Error", "id": 13},
+            "message": f"Java execution environment not properly configured: {e}"
+        }
     except subprocess.TimeoutExpired:
         return {
             "status": {"description": "Time Limit Exceeded", "id": 5},
@@ -184,7 +192,7 @@ def run_local_java(code: str) -> Dict[str, Any]:
         logger.error(f"Local Java execution error: {e}")
         return {
             "status": {"description": "Internal Error", "id": 13},
-            "stderr": str(e)
+            "message": str(e)
         }
     finally:
         import shutil
